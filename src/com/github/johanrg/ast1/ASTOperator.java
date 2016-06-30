@@ -1,0 +1,79 @@
+package com.github.johanrg.ast1;
+
+/**
+ * @author johan
+ * @since 2016-06-30.
+ */
+public class ASTOperator extends ASTNode {
+    enum Associativity {
+        LEFT,
+        RIGHT;
+    }
+    enum Group {
+        ASSIGNMENT,
+        BINARY,
+        UNARY,
+        RELATIONAL;
+    }
+    enum Type {
+        ASSIGNMENT("=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+        ADD_ASSIGNMENT("+=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+        SUB_ASSIGNMENT("-=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+        MUL_ASSIGNMENT("*=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+        DIV_ASSIGNMENT("/=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+
+        LOGICAL_OR("||", Group.BINARY, 3, Associativity.LEFT),
+        LOGICAL_AND("&&", Group.BINARY, 4, Associativity.LEFT),
+
+        RELATIONAL_EQUAL("==", Group.RELATIONAL, 8, Associativity.LEFT),
+        RELATIONAL_NOT_EQUAL("!=", Group.RELATIONAL, 8, Associativity.LEFT),
+
+        BINARY_ADD("+", Group.BINARY, 11, Associativity.LEFT),
+        BINARY_SUB("-", Group.BINARY, 11, Associativity.LEFT),
+
+        BINARY_DIV("/", Group.BINARY, 12, Associativity.LEFT),
+        BINARY_MOD("%", Group.BINARY, 12, Associativity.LEFT),
+        BINARY_MUL("*", Group.BINARY, 12, Associativity.LEFT),
+
+        UNARY_PLUS("+", Group.UNARY, 13, Associativity.RIGHT),
+        UNARY_MINUS("-", Group.UNARY, 13, Associativity.RIGHT),
+        UNARY_LOGICAL_NEGATION("!", Group.UNARY, 13, Associativity.RIGHT),
+        UNARY_PRE_INCREMENT("++", Group.UNARY, 13, Associativity.RIGHT),
+        UNARY_PRE_DECREMENT("--", Group.UNARY, 13, Associativity.RIGHT),
+
+        UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT),
+        UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT),
+        ;
+        private final String symbol;
+        private final Group group;
+        private final int precedence;
+        private final Associativity associativity;
+
+        Type(String symbol, Group group, int precedence, Associativity associativity) {
+            this.symbol = symbol;
+            this.group = group;
+            this.precedence = precedence;
+            this.associativity = associativity;
+        }
+    }
+
+    private final Type type;
+
+    public ASTOperator(Location location, Type type) {
+        super(location);
+        this.type = type;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public static Type match(String symbol) {
+        for(ASTOperator.Type type : ASTOperator.Type.values()) {
+           if (type.symbol.equals(symbol)) {
+               return type;
+           }
+        }
+        return null;
+    }
+}
