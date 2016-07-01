@@ -1,4 +1,6 @@
-package com.github.johanrg.ast1;
+package com.github.johanrg.ast;
+
+import com.github.johanrg.compiler.Location;
 
 /**
  * @author johan

@@ -1,13 +1,15 @@
-package com.github.johanrg.ast1;
+package com.github.johanrg.ast;
+
+import com.github.johanrg.compiler.Location;
 
 /**
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTVariable extends ASTLiteral implements Identifier {
+public class ASTVariable<T> extends ASTLiteral<T> implements Identifier {
     private final String identifier;
 
-    public ASTVariable(String identifier, Value value, Location location) {
+    public ASTVariable(String identifier, T value, Location location) {
         super(value, location);
         this.identifier = identifier;
     }

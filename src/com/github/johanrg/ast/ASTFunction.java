@@ -1,4 +1,6 @@
-package com.github.johanrg.ast1;
+package com.github.johanrg.ast;
+
+import com.github.johanrg.compiler.Location;
 
 import java.util.List;
 
@@ -10,9 +12,9 @@ public class ASTFunction extends ASTNode implements Identifier {
     private final String identifier;
     private final List<ASTNode> parameters;
     private final ASTNode statement;
-    private final Value.Type returnType;
+    private final ASTLiteral.Type returnType;
 
-    public ASTFunction(String identifier, List<ASTNode> parameters, ASTNode statement, Value.Type returnType, Location location) {
+    public ASTFunction(String identifier, List<ASTNode> parameters, ASTNode statement, ASTLiteral.Type returnType, Location location) {
         super(location);
         this.parameters = parameters;
         this.statement = statement;
@@ -32,7 +34,7 @@ public class ASTFunction extends ASTNode implements Identifier {
         return statement;
     }
 
-    public Value.Type getReturnType() {
+    public ASTLiteral.Type getReturnType() {
         return returnType;
     }
 }

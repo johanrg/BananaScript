@@ -1,4 +1,4 @@
-package com.github.johanrg.ast1;
+package com.github.johanrg.ast;
 
 /**
  * @author johan

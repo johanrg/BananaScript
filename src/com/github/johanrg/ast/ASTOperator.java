@@ -1,21 +1,23 @@
-package com.github.johanrg.ast1;
+package com.github.johanrg.ast;
+
+import com.github.johanrg.compiler.Location;
 
 /**
  * @author johan
  * @since 2016-06-30.
  */
 public class ASTOperator extends ASTNode {
-    enum Associativity {
+    public enum Associativity {
         LEFT,
         RIGHT;
     }
-    enum Group {
+    public enum Group {
         ASSIGNMENT,
         BINARY,
         UNARY,
         RELATIONAL;
     }
-    enum Type {
+    public enum Type {
         ASSIGNMENT("=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
         ADD_ASSIGNMENT("+=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
         SUB_ASSIGNMENT("-=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
@@ -42,8 +44,8 @@ public class ASTOperator extends ASTNode {
         UNARY_PRE_DECREMENT("--", Group.UNARY, 13, Associativity.RIGHT),
 
         UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT),
-        UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT),
-        ;
+        UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT);
+
         private final String symbol;
         private final Group group;
         private final int precedence;
@@ -55,6 +57,18 @@ public class ASTOperator extends ASTNode {
             this.precedence = precedence;
             this.associativity = associativity;
         }
+
+        public Group getGroup() {
+            return group;
+        }
+
+        public int getPrecedence() {
+            return precedence;
+        }
+
+        public Associativity getAssociativity() {
+            return associativity;
+        }
     }
 
     private final Type type;
@@ -64,16 +78,17 @@ public class ASTOperator extends ASTNode {
         this.type = type;
     }
 
+    public static Type match(String symbol) {
+        for(ASTOperator.Type type : ASTOperator.Type.values()) {
+            if (type.symbol.equals(symbol)) {
+                return type;
+            }
+        }
+        return null;
+    }
+
     public Type getType() {
         return type;
     }
 
-    public static Type match(String symbol) {
-        for(ASTOperator.Type type : ASTOperator.Type.values()) {
-           if (type.symbol.equals(symbol)) {
-               return type;
-           }
-        }
-        return null;
-    }
 }
