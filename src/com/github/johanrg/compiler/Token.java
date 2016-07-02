@@ -5,17 +5,26 @@ package com.github.johanrg.compiler;
  * @since 2016-06-29.
  */
 public class Token {
-    private final TokenType type;
+    public enum Type {
+        LITERAL_NUMBER,
+        LITERAL_CHAR,
+        LITERAL_STRING,
+        OPERATOR,
+        DELIMITER,
+        IDENTIFIER;
+    }
+
+    private final Type type;
     private final String data;
     private final Location location;
 
-    public Token(TokenType type, String data, Location location) {
+    public Token(Type type, String data, Location location) {
         this.type = type;
         this.data = data;
         this.location = location;
     }
 
-    public TokenType getType() {
+    public Type getType() {
         return type;
     }
 
