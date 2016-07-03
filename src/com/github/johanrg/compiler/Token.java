@@ -1,26 +1,40 @@
 package com.github.johanrg.compiler;
 
+import com.github.johanrg.ast.ASTLiteral;
+
 /**
  * @author johan
  * @since 2016-06-29.
  */
 public class Token {
     public enum Type {
-        LITERAL_NUMBER,
-        LITERAL_CHAR,
-        LITERAL_STRING,
+        LITERAL,
         OPERATOR,
         DELIMITER,
-        IDENTIFIER;
+        IDENTIFIER,
+        END_OF_STATEMENT,
+        EOF;
     }
 
     private final Type type;
     private final String data;
     private final Location location;
+    private final DataType dataType;
+    private final int blockLevel;
 
-    public Token(Type type, String data, Location location) {
+    public Token(Type type, String data, int blockLevel, Location location) {
         this.type = type;
         this.data = data;
+        this.location = location;
+        this.blockLevel = blockLevel;
+        this.dataType = null;
+    }
+
+    public Token(Type type, DataType dataType, String data, int blockLevel, Location location) {
+        this.type = type;
+        this.dataType = dataType;
+        this.data = data;
+        this.blockLevel = blockLevel;
         this.location = location;
     }
 
@@ -32,8 +46,20 @@ public class Token {
         return data;
     }
 
+    public DataType getDataType() {
+        return dataType;
+    }
+
+    public int getBlockLevel() {
+        return blockLevel;
+    }
+
+    public Location getLocation() {
+        return location;
+    }
+
     @Override
     public String toString() {
-        return String.format("(%d:%d) %s '%s'", location.getLine(), location.getColumn(), type.toString(), data) ;
+        return String.format("(%d:%d) [%d] %s '%s'", location.getLine(), location.getColumn(), blockLevel, type.toString(), data) ;
     }
 }

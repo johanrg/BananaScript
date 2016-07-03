@@ -3,7 +3,6 @@ package com.github.johanrg.compiler;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 
 /**
  * The class lexes source files into tokens.
@@ -17,7 +16,7 @@ public class Lexer {
      */
     @FunctionalInterface
     private interface State {
-        State lex();
+        State lex() throws CompilerException;
     }
 
     // Constants
@@ -26,15 +25,16 @@ public class Lexer {
     private final char CITATION = '"';
     private final char APOSTROPHE = '\'';
     private final char BACKSLASH = '\\';
-    private final char[] WHITESPACE = new char[]{' ', '\t', '\r'};
+    private final char[] WHITESPACE = new char[]{' ', '\t', '\r', '\b', '\f'};
+    private final char[] ESCAPED_CHAR = new char[]{'t', 'r', 'n', 'b', 'f'};
     private final char[] DECIMAL_RANGE = new char[]{'0', '9'};
     private final char[] HEXADECIMAL_RANGE = new char[]{'0', '9', 'a', 'f', 'A', 'F'};
     private final char[] ALPHA_RANGE = new char[]{'a', 'z', 'A', 'Z', '_', '_'};
     private final char[] ALPHANUMERIC_RANGE = new char[]{'a', 'z', 'A', 'Z', '0', '9', '_', '_'};
     private final char[] DELIMITER = new char[]{',', ':', '[', ']', '{', '}', '(', ')', '.', ';', '@'};
-    private final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>'};
+    private final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>', '^'};
 
-    private final Queue<Token> tokens = new LinkedList<>();
+    private final List<Token> tokens = new LinkedList<>();
     private final List<String> errors = new ArrayList<>();
     private String fileName;
     private String source;
@@ -43,6 +43,8 @@ public class Lexer {
     private int line;
     private int column;
     private Location location;
+    private Token.Type tokenType;
+    private int blockLevel = 0;
 
     /**
      * WIP params will change.
@@ -50,7 +52,7 @@ public class Lexer {
      * @param fileName
      * @param source
      */
-    public void lex(String fileName, String source) {
+    public void lex(String fileName, String source) throws CompilerException {
         this.fileName = fileName;
         this.source = source + EOF;
         start = 0;
@@ -67,18 +69,18 @@ public class Lexer {
      *
      * @return A new functional State.
      */
-    private State lexStart() {
+    private State lexStart() throws CompilerException {
         updateLocation();
-        if (accept(WHITESPACE)) {
-            return this::handleWhiteSpace;
+        if (check(WHITESPACE)) {
+            return this::handleWhiteSpaces;
         } else if (match("//")) {
             return this::handleLineComment;
         } else if (match("/*")) {
             return this::handleMultiLineComment;
         } else if (check(NEW_LINE)) {
             return this::handleNewLine;
-        } else if (acceptRange(DECIMAL_RANGE)) {
-            return this::lexNumber;
+        } else if (checkRange(DECIMAL_RANGE)) {
+            return this::lexDecimalNumber;
         } else if (acceptRange(ALPHA_RANGE)) {
             return this::lexIdentifier;
         } else if (accept(OPERATOR)) {
@@ -89,11 +91,13 @@ public class Lexer {
             return this::lexString;
         } else if (accept(APOSTROPHE)) {
             return this::lexChar;
+
         } else if (accept(EOF)) {
             return this::handleEndOfFile;
         } else {
-            return error("syntax error");
+            error("syntax error");
         }
+        return null;
     }
 
     /**
@@ -101,7 +105,28 @@ public class Lexer {
      *
      * @return A new functional state.
      */
-    private State handleWhiteSpace() {
+    private State handleWhiteSpaces() throws CompilerException {
+        if (column == 1) {
+            int spaces = 0;
+            int tabs = 0;
+            while (accept(' ')) {
+                ++spaces;
+            }
+            while (accept('\t')) {
+                ++tabs;
+            }
+            if (tabs > 0 && spaces > 0) {
+                error("mixed tabs and spaces");
+            }
+            if (spaces > 0) {
+                if (spaces % 4 != 0) {
+                    error("indentation spaces must be in multiples of 4");
+                }
+                blockLevel = spaces / 4;
+            } else if (tabs > 0) {
+                blockLevel = tabs;
+            }
+        }
         while (accept(WHITESPACE)) ;
         ignore();
         return this::lexStart;
@@ -112,12 +137,12 @@ public class Lexer {
      *
      * @return a new functional state.
      */
-    private State handleNewLine() {
+    private State handleNewLine() throws CompilerException {
         while (accept(NEW_LINE)) {
             ++line;
             column = 1;
         }
-        ignore();
+        newToken(Token.Type.END_OF_STATEMENT);
         return this::lexStart;
     }
 
@@ -126,7 +151,7 @@ public class Lexer {
      *
      * @return a new functional state.
      */
-    private State handleLineComment() {
+    private State handleLineComment() throws CompilerException {
         while (not(NEW_LINE)) ;
         ignore();
         return this::lexStart;
@@ -137,14 +162,14 @@ public class Lexer {
      *
      * @return A new functional state
      */
-    private State handleMultiLineComment() {
+    private State handleMultiLineComment() throws CompilerException {
         int nested = 0;
         for (; ; ) {
             while (not('/', '*', NEW_LINE)) ;
             if (check(NEW_LINE)) {
                 handleNewLine();
             } else if (check(EOF)) {
-                return error("unclosed comment");
+                error("unclosed comment");
             } else if (accept('*') && accept('/') && --nested == 0) {
                 break;
             } else if (accept('/') && accept('*')) {
@@ -156,40 +181,83 @@ public class Lexer {
     }
 
     /**
-     * Handles end of file, very simple atm.
+     * Handles end of file.
      *
      * @return A new functional state.
      */
     private State handleEndOfFile() {
+        newToken(Token.Type.EOF);
         return null;
     }
 
-    /**
-     * Lexes number literal of type int, float, double, hexadecimal and exponential but does not verify that
-     * the syntax of the number. Values like 0x.ef is dealt with in the parser.
-     *
-     * @return A new functional state.
-     */
-    private State lexNumber() {
-        char[] digits = DECIMAL_RANGE;
-        if (accept('0') && accept('x', 'X')) {
-            digits = HEXADECIMAL_RANGE;
+    private State lexDecimalNumber() throws CompilerException {
+        if (match("0x") || match("0X")) {
+            skip();
+            skip();
+            lexHexadecimalNumber();
+            addLiteralHex();
+            return this::lexStart;
+        } else {
+            lexUnsignedDigitSequence(false);
+            if (accept('.')) {
+                lexUnsignedDigitSequence(true);
+            } else {
+                addLiteral(DataType.INT);
+                return this::lexStart;
+            }
         }
-        while (acceptRange(digits)) ;
-        if (accept('.')) {
-            while (acceptRange(digits)) ;
+        lexScaleFactor();
+        if (accept('f', 'F')) {
+            addLiteral(DataType.FLOAT);
+        } else {
+            addLiteral(DataType.DOUBLE);
         }
+        return this::lexStart;
+    }
+
+    private void lexUnsignedDigitSequence(boolean optional) throws CompilerException {
+        if (acceptRange(DECIMAL_RANGE)) {
+            while (acceptRange(DECIMAL_RANGE)) ;
+        } else if (!optional) {
+            error("expexted digit");
+        }
+    }
+
+    private void lexHexadecimalNumber() throws CompilerException {
+        if (acceptRange(HEXADECIMAL_RANGE)) {
+            while (acceptRange(HEXADECIMAL_RANGE)) ;
+        } else {
+            error("expected hexadecimal digit");
+        }
+    }
+
+    private void lexScaleFactor() throws CompilerException {
         if (accept('e', 'E')) {
             accept('+', '-');
-            while (acceptRange(DECIMAL_RANGE)) ;
+            lexUnsignedDigitSequence(true);
         }
-        accept('f', 'F');
+    }
+
+    private void addLiteralHex() throws CompilerException {
         if (Character.isAlphabetic(peek())) {
-            next();
-            return error(String.format("bad number syntax %s", source.substring(start, pos)));
+            error("bad number syntax");
         }
-        newToken(Token.Type.LITERAL_NUMBER);
-        return this::lexStart;
+        String value = source.substring(start, pos);
+        try {
+            value = Integer.toString(Integer.parseInt(value, 16));
+        } catch (NumberFormatException e) {
+            error("bad hexadecimal syntax");
+        }
+        tokens.add(new Token(Token.Type.LITERAL, DataType.INT, value, blockLevel, location));
+        ignore();
+    }
+
+    private void addLiteral(DataType dataType) throws CompilerException {
+        if (Character.isAlphabetic(peek())) {
+            error("bad number syntax");
+        }
+        tokens.add(new Token(Token.Type.LITERAL, dataType, source.substring(start, pos), blockLevel, location));
+        ignore();
     }
 
     /**
@@ -217,7 +285,7 @@ public class Lexer {
     /**
      * Lexes delimiters like , : () {} etc.
      *
-     * @return  A new functional state.
+     * @return A new functional state.
      */
     private State lexDelimiter() {
         newToken(Token.Type.DELIMITER);
@@ -229,20 +297,20 @@ public class Lexer {
      *
      * @return A new functional state.
      */
-    private State lexString() {
+    private State lexString() throws CompilerException {
         ignore();
         do {
             while (not(BACKSLASH, CITATION, NEW_LINE)) ;
 
             if (accept(EOF, NEW_LINE)) {
-                return error("illegal line end in string literal");
+                error("illegal line end in string literal");
             }
             if (accept(BACKSLASH)) {
                 accept(CITATION);
             }
         } while (not(CITATION));
 
-        newToken(Token.Type.LITERAL_STRING);
+        addLiteral(DataType.STRING);
 
         skip();
         ignore();
@@ -254,20 +322,34 @@ public class Lexer {
      *
      * @return A new functional state.
      */
-    private State lexChar() {
+    private State lexChar() throws CompilerException {
+        int size = 0;
         ignore();
         do {
-            while (not(BACKSLASH, APOSTROPHE, NEW_LINE)) ;
-
-            if (accept(EOF, NEW_LINE)) {
-                return error("illegal line end in char literal");
+            while (not(BACKSLASH, APOSTROPHE, NEW_LINE)) {
+                ++size;
             }
+
             if (accept(BACKSLASH)) {
-                accept(APOSTROPHE);
+                if (accept(ESCAPED_CHAR)) {
+                    ++size;
+                } else if (acceptRange(DECIMAL_RANGE)) {
+                    acceptRange(DECIMAL_RANGE);
+                    acceptRange(DECIMAL_RANGE);
+                    ++size;
+                } else {
+                   error("illegal escape code");
+                }
             }
-        } while (not(APOSTROPHE));
+            if (accept(EOF, NEW_LINE)) {
+                error("illegal line end in char literal");
+            }
+        } while (!check(APOSTROPHE));
 
-        newToken(Token.Type.LITERAL_CHAR);
+        if (size > 1) {
+            error("illegal literal character length");
+        }
+        addLiteral(DataType.CHAR);
         skip();
         ignore();
         return this::lexStart;
@@ -285,11 +367,9 @@ public class Lexer {
      * Error handling in the lexer
      *
      * @param error The error message
-     * @return A new functional state
      */
-    private State error(String error) {
-        errors.add(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
-        return null;
+    private void error(String error) throws CompilerException {
+        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
     }
 
     /**
@@ -298,8 +378,14 @@ public class Lexer {
      * @param type The type of token to be created.
      */
     private void newToken(Token.Type type) {
-        tokens.offer(new Token(type, source.substring(start, pos), location));
+        tokens.add(new Token(type, source.substring(start, pos), blockLevel, location));
         ignore();
+    }
+
+    private String save() {
+        String s = source.substring(start, pos);
+        ignore();
+        return s;
     }
 
     /**
@@ -312,7 +398,7 @@ public class Lexer {
     /**
      * Backs up the position one step.
      */
-    private void revert() {
+    private void backup() {
         --pos;
         if (start > pos) {
             start = pos;
@@ -363,12 +449,13 @@ public class Lexer {
                 return true;
             }
         }
-        revert();
+        backup();
         return false;
     }
 
     /**
      * Accepts the char at the current position if it's in the valid range and moves the position forward one step.
+     *
      * @param valid 1 or more pair of from char - to char ranges in relation to its ascii value.
      * @return boolean true if the character is valid.
      */
@@ -380,7 +467,7 @@ public class Lexer {
                 return true;
             }
         }
-        revert();
+        backup();
         return false;
     }
 
@@ -402,7 +489,25 @@ public class Lexer {
     }
 
     /**
+     * Checks if the character is in the valid range without moving the source position forward.
+     *
+     * @param valid 1 or more pair of from char - to char ranges in relation to its ascii value.
+     * @return boolean true if the character is valid.
+     */
+    private boolean checkRange(char... valid) {
+        assert valid.length % 2 == 0 && valid.length > 0 : "must have 1 or more pair of arguments";
+        char c = peek();
+        for (int i = 0; i < valid.length - 1; i += 2) {
+            if (c >= valid[i] && c <= valid[i + 1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Accepts the char in the current positon if it's NOT in the set of characters.
+     * Returns false on EOF.
      *
      * @param invalid Set of invalid characters
      * @return boolean true if it's not in the set.
@@ -410,13 +515,13 @@ public class Lexer {
     private boolean not(char... invalid) {
         char c = next();
         if (c == EOF) {
-            revert();
+            backup();
             return false;
         }
 
         for (char n : invalid) {
             if (c == n) {
-                revert();
+                backup();
                 return false;
             }
         }
@@ -438,7 +543,7 @@ public class Lexer {
         return errors;
     }
 
-    public Queue<Token> getTokens() {
+    public List<Token> getTokens() {
         return tokens;
     }
 }

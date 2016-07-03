@@ -9,12 +9,11 @@ import java.util.Map;
  * @author johan
  * @since 2016-07-02.
  */
-public class ASTBlock extends ASTNode {
+public class ASTBlock implements ASTNode {
     private final List<ASTNode> statements;
     private final Map<String, Identifier> identifiers;
 
-    public ASTBlock(List<ASTNode> statements, Map<String, Identifier> identifiers, Location location) {
-        super(location);
+    public ASTBlock(List<ASTNode> statements, Map<String, Identifier> identifiers) {
         this.statements = statements;
         this.identifiers = identifiers;
     }

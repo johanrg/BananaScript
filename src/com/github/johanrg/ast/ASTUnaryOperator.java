@@ -9,8 +9,8 @@ import com.github.johanrg.compiler.Location;
 public class ASTUnaryOperator extends ASTOperator {
     private final ASTNode node;
 
-    public ASTUnaryOperator(Type type, ASTNode node, Location location) {
-        super(location, type);
+    public ASTUnaryOperator(Type type, ASTNode node) {
+        super(type);
         this.node = node;
     }
 

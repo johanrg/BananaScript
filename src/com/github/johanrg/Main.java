@@ -1,6 +1,9 @@
 package com.github.johanrg;
 
+import com.github.johanrg.compiler.CompilerException;
 import com.github.johanrg.compiler.Lexer;
+import com.github.johanrg.compiler.Parser;
+
 import java.io.*;
 import java.nio.charset.Charset;
 
@@ -19,17 +22,20 @@ public class Main {
     }
 
     public static void main(String[] args) {
-        double a = .2;
         try {
-            String source = readFile("/home/johan/IdeaProjects/BananaScript/src/com/github/johanrg/compiler/Lexer.java", Charset.forName("utf8"));
+            String source = readFile("/home/johan/sourcefile", Charset.forName("utf8"));
+            //String source = readFile("/home/johan/IdeaProjects/BananaScript/src/com/github/johanrg/compiler/Lexer.java", Charset.forName("utf8"));
             Lexer lexer = new Lexer();
             lexer.lex("Lexer.java", source);
+            lexer.getTokens().forEach(System.out::println);
             if (lexer.getErrors().size() > 0) {
                 lexer.getErrors().forEach(System.out::println);
             } else {
-                lexer.getTokens().forEach(System.out::println);
-                System.out.printf("Number of tokens: %d\n", lexer.getTokens().size());
+                Parser parser = new Parser(lexer.getTokens());
+
             }
+        } catch (CompilerException e) {
+            System.err.println(e.getMessage());
         } catch (IOException e) {
             System.err.println(e.getMessage());
         }

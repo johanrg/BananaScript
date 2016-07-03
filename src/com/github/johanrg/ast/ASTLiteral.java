@@ -1,44 +1,55 @@
 package com.github.johanrg.ast;
 
-import com.github.johanrg.compiler.Location;
+import com.github.johanrg.compiler.DataType;
 
 /**
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTLiteral<T> extends ASTNode {
-    public enum Type {
-        INTEGER,
-        FLOAT,
-        DOUBLE,
-        CHAR,
-        STRING;
-    }
-    private final T value;
+public class ASTLiteral implements ASTNode {
 
-    public ASTLiteral(T value, Location location) {
-        super(location);
+
+    private final Object value;
+    private final DataType dataType;
+
+    public ASTLiteral(Object value, DataType dataType) {
         this.value = value;
+        this.dataType = dataType;
     }
 
-    public T getValue() {
+    public Object getValue() {
         return value;
     }
 
-    public Type getType() {
-        if (value instanceof Integer) {
-            return Type.INTEGER;
-        } else if (value instanceof Float) {
-            return Type.FLOAT;
-        } else if (value instanceof Double) {
-            return Type.DOUBLE;
-        } else if (value instanceof Character) {
-            return Type.CHAR;
-        } else if (value instanceof String) {
-            return Type.STRING;
-        } else {
-            assert false : "Unsupported type";
-            return null;
+    public DataType getDataType() {
+        return dataType;
+    }
+
+    public static DataType typeForName(String name) {
+        for (DataType t : DataType.values()) {
+            if (t.toString().toLowerCase().equals(name)) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    public static Object defaultValueForType(DataType dataType) {
+        switch (dataType) {
+            case INT:
+                return new Integer(0);
+            case FLOAT:
+                return new Float(0.0);
+            case DOUBLE:
+                return new Double(0.0);
+            case CHAR:
+                return new Character('\0');
+            case STRING:
+                return new String("");
+            case VOID:
+                return null;
+            default:
+                return null;
         }
     }
 }
