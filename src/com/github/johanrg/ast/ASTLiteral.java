@@ -37,23 +37,28 @@ public class ASTLiteral extends ASTNode {
     }
 
     public boolean getBoolean() {
-        assert dataType != DataType.BOOLEAN : "Literal is not a boolean";
+        assert dataType == DataType.BOOLEAN : "Literal is not a boolean";
         return (Boolean) value;
     }
 
     public int getInt() {
-        assert dataType != DataType.INT : "Literal is not an integer";
+        assert dataType == DataType.INT : "Literal is not an integer";
         return (Integer) value;
     }
 
     public float getFloat() {
-        assert dataType != DataType.FLOAT : "Literal is not a float";
+        assert dataType == DataType.FLOAT : "Literal is not a float";
         return (Float) value;
     }
 
     public double getDouble() {
-        assert dataType != DataType.DOUBLE : "Literal is not a double";
+        assert dataType == DataType.DOUBLE : "Literal is not a double";
         return (Double) value;
+    }
+
+    public String getString() {
+        assert dataType == DataType.STRING : "Literal is not a double";
+        return (String) value;
     }
 
     public static Object defaultValueForType(DataType dataType) {

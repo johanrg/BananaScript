@@ -3,6 +3,7 @@ package com.github.johanrg.compiler;
 import com.github.johanrg.ast.*;
 
 import javax.xml.crypto.Data;
+import javax.xml.datatype.DatatypeFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -91,6 +92,7 @@ public class Parser {
                         node, identifierToken.getLocation());
             }
         } else if (accept("=")) {
+            ignore();
             ASTNode node = parseExpression();
             DataType expressionDataType = typeCheckExpression(node);
             if (identifierDataType == DataType.AUTO) {
@@ -98,9 +100,14 @@ public class Parser {
             } else if (identifierDataType != expressionDataType) {
                 error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
             }
-            return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
-                    new ASTVariable(identifierToken.getData(), null, identifierDataType, false, identifierToken.getLocation()),
-                    node, identifierToken.getLocation());
+            ASTLiteral result = solveExpressionIfPossible(node);
+            if (result == null) {
+                return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
+                        new ASTVariable(identifierToken.getData(), null, identifierDataType, false, identifierToken.getLocation()),
+                        node, identifierToken.getLocation());
+            } else {
+                return new ASTVariable(identifierToken.getData(), result.getValue(), identifierDataType, false, identifierToken.getLocation());
+            }
         } else {
             error("data type auto with no expression");
         }
@@ -135,6 +142,7 @@ public class Parser {
             }
 
             if (accept(")")) {
+                ignore();
                 --parentheses;
                 if (parentheses < 0) {
                     backup();
@@ -159,7 +167,7 @@ public class Parser {
                     } else if (op == ASTOperator.Type.BINARY_SUB) {
                         op = ASTOperator.Type.BINARY_SUB;
                     } else {
-                        error("did not expect binary operator");
+                        error("did not expect operator");
                     }
                 }
                 operator = true;
@@ -211,12 +219,9 @@ public class Parser {
     }
 
     private ASTLiteral solveExpressionIfPossible(ASTNode node) throws CompilerException {
-        if (node instanceof ASTVariable) {
-            return null;
-        } else if (node instanceof ASTLiteral) {
+        if (node instanceof ASTLiteral) {
             return (ASTLiteral) node;
-        }
-        if (node instanceof ASTBinaryOperator) {
+        } else if (node instanceof ASTBinaryOperator) {
             ASTLiteral left = solveExpressionIfPossible(((ASTBinaryOperator) node).getLeft());
             ASTLiteral right = solveExpressionIfPossible(((ASTBinaryOperator) node).getRight());
             if (left == null || right == null) {
@@ -225,16 +230,26 @@ public class Parser {
 
             switch (((ASTBinaryOperator) node).getType()) {
                 case BINARY_ADD:
-                    break;
+                    return solveAdd(left, right);
+                case BINARY_SUB:
+                    return solveSub(left, right);
+                case BINARY_MUL:
+                    return solveMul(left, right);
+                case BINARY_DIV:
+                    return solveDiv(left, right);
+                case BINARY_MOD:
+                    return solveMod(left, right);
+                case BINARY_POWER:
+                    return solvePower(left, right);
             }
         }
-
+        return null;
     }
 
     private ASTLiteral solveAdd(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
-                error("binary addition not allowed with boolean type");
+                error("binary addition not allowed with boolean type", left.getLocation());
                 break;
             case INT:
                 return new ASTLiteral(left.getInt() + right.getInt(), DataType.INT, left.getLocation());
@@ -242,7 +257,131 @@ public class Parser {
                 return new ASTLiteral(left.getFloat() + right.getFloat(), DataType.FLOAT, left.getLocation());
             case DOUBLE:
                 return new ASTLiteral(left.getDouble() + right.getDouble(), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary additon not allwoed with char type");
+                break;
+            case STRING:
+                return new ASTLiteral(left.getString() + right.getString(), DataType.STRING, left.getLocation());
+            default:
+                assert false : "binary add does not support this type.";
         }
+        return null;
+    }
+
+    private ASTLiteral solveSub(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary subtraction not allowed with boolean type", left.getLocation());
+                break;
+            case INT:
+                return new ASTLiteral(left.getInt() - right.getInt(), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral(left.getFloat() - right.getFloat(), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(left.getDouble() - right.getDouble(), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary subtractions not allowed with char");
+                break;
+            case STRING:
+                error("binary subtractions not allowed with string", left.getLocation());
+                break;
+            default:
+                assert false : "binary subtraction does not support this type";
+        }
+        return null;
+    }
+
+
+    private ASTLiteral solveMul(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary multiplication not allowed with boolean type", left.getLocation());
+                break;
+            case INT:
+                return new ASTLiteral(left.getInt() * right.getInt(), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral(left.getFloat() * right.getFloat(), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(left.getDouble() * right.getDouble(), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary multiplication not allowed with char");
+                break;
+            case STRING:
+                error("binary multiplication not allowed with string", left.getLocation());
+                break;
+            default:
+                assert false : "binary multiplication does not support this type";
+        }
+        return null;
+    }
+
+    private ASTLiteral solveDiv(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary division not allowed with boolean type", left.getLocation());
+                break;
+            case INT:
+                return new ASTLiteral(left.getInt() / right.getInt(), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral(left.getFloat() / right.getFloat(), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(left.getDouble() / right.getDouble(), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary division not allowed with char");
+                break;
+            case STRING:
+                error("binary division not allowed with string", left.getLocation());
+                break;
+            default:
+                assert false : "binary division does not support this type";
+        }
+        return null;
+    }
+
+    private ASTLiteral solveMod(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary modulus not allowed with boolean type", left.getLocation());
+                break;
+            case INT:
+                return new ASTLiteral(left.getInt() % right.getInt(), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral(left.getFloat() % right.getFloat(), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(left.getDouble() % right.getDouble(), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary modulus not allowed with char");
+                break;
+            case STRING:
+                error("binary modulus not allowed with string", left.getLocation());
+                break;
+            default:
+                assert false : "binary modulus does not support this type";
+        }
+        return null;
+    }
+
+    private ASTLiteral solvePower(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary exponent not allowed with boolean type", left.getLocation());
+                break;
+            case INT:
+                return new ASTLiteral((int) Math.pow((double) left.getInt(), (double) right.getInt()), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral((float) Math.pow(left.getFloat(), right.getFloat()), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(Math.pow(left.getDouble(), right.getDouble()), DataType.DOUBLE, left.getLocation());
+            case CHAR:
+                error("binary exponent not allowed with char");
+                break;
+            case STRING:
+                error("binary exponent not allowed with string", left.getLocation());
+                break;
+            default:
+                assert false : "binary exponent does not support this type";
+        }
+        return null;
     }
 
     private void popOperatorOntoExpressionStack() throws CompilerException {
@@ -253,7 +392,8 @@ public class Parser {
             }
             ASTNode node = expressionStack.pop();
             expressionStack.push(new ASTUnaryOperator(astOperator.getType(), node, astOperator.getLocation()));
-        } else if (astOperator.getType().getGroup() == ASTOperator.Group.BINARY) {
+        } else if (astOperator.getType().getGroup() == ASTOperator.Group.BINARY ||
+                astOperator.getType().getGroup() == ASTOperator.Group.ASSIGNMENT) {
             if (expressionStack.size() < 2) {
                 error("expected operand");
             }
