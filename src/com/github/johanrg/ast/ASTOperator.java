@@ -6,7 +6,7 @@ import com.github.johanrg.compiler.Location;
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTOperator implements ASTNode {
+public class ASTOperator extends ASTNode {
     public enum Associativity {
         LEFT,
         RIGHT;
@@ -49,8 +49,8 @@ public class ASTOperator implements ASTNode {
         UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT),
         UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT),
 
-        OPEN_PARENTHESES("(", Group.DELIMITER, 15, Associativity.LEFT),
-        CLOSE_PARENTHESES(")", Group.DELIMITER, 15, Associativity.LEFT);
+        OPEN_PARENTHESES("(", Group.DELIMITER, 0, Associativity.LEFT),
+        CLOSE_PARENTHESES(")", Group.DELIMITER, 0, Associativity.LEFT);
 
         private final String symbol;
         private final Group group;
@@ -79,7 +79,8 @@ public class ASTOperator implements ASTNode {
 
     private final Type type;
 
-    public ASTOperator(Type type) {
+    public ASTOperator(Type type, Location location) {
+        super(location);
         this.type = type;
     }
 

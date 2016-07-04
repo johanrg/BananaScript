@@ -1,18 +1,20 @@
 package com.github.johanrg.ast;
 
 import com.github.johanrg.compiler.DataType;
+import com.github.johanrg.compiler.Location;
 
 /**
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTLiteral implements ASTNode {
+public class ASTLiteral extends ASTNode {
 
 
     private final Object value;
     private final DataType dataType;
 
-    public ASTLiteral(Object value, DataType dataType) {
+    public ASTLiteral(Object value, DataType dataType, Location location) {
+        super(location);
         this.value = value;
         this.dataType = dataType;
     }
@@ -34,18 +36,38 @@ public class ASTLiteral implements ASTNode {
         return null;
     }
 
+    public boolean getBoolean() {
+        assert dataType != DataType.BOOLEAN : "Literal is not a boolean";
+        return (Boolean) value;
+    }
+
+    public int getInt() {
+        assert dataType != DataType.INT : "Literal is not an integer";
+        return (Integer) value;
+    }
+
+    public float getFloat() {
+        assert dataType != DataType.FLOAT : "Literal is not a float";
+        return (Float) value;
+    }
+
+    public double getDouble() {
+        assert dataType != DataType.DOUBLE : "Literal is not a double";
+        return (Double) value;
+    }
+
     public static Object defaultValueForType(DataType dataType) {
         switch (dataType) {
             case INT:
-                return new Integer(0);
+                return 0;
             case FLOAT:
-                return new Float(0.0);
+                return 0.0f;
             case DOUBLE:
-                return new Double(0.0);
+                return 0.0;
             case CHAR:
-                return new Character('\0');
+                return '\0';
             case STRING:
-                return new String("");
+                return "";
             case VOID:
                 return null;
             default:

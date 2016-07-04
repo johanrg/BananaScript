@@ -2,11 +2,11 @@ package com.github.johanrg.compiler;
 
 import com.github.johanrg.ast.*;
 
+import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-
-import static com.github.johanrg.compiler.DataType.INT;
+import java.util.function.BinaryOperator;
 
 /**
  * @author johan
@@ -15,7 +15,7 @@ import static com.github.johanrg.compiler.DataType.INT;
 public class Parser {
     private ASTNode globalNode = null;
     private final List<Token> tokens;
-    private final Stack<ASTOperator.Type> operatorStack = new Stack<>();
+    private final Stack<ASTOperator> operatorStack = new Stack<>();
     private final Stack<ASTNode> expressionStack = new Stack<>();
     private int start = 0;
     private int pos = 0;
@@ -26,28 +26,23 @@ public class Parser {
     }
 
     private void parse() throws CompilerException {
-        //System.out.println(parseIdentifierDeclarationStatement());
-        accept("(");
-        ignore();
-        ASTNode first = parseExpression();
-        accept(",");
-        ignore();
-        ASTNode second = parseExpression();
+        ASTNode node = parseIdentifierDeclarationStatement();
+        //ASTNode first = parseExpression();
     }
 
     private ASTNode parseIdentifierDeclarationStatement() throws CompilerException {
-        DataType dataType;
+        DataType identifierDataType;
         expect(Token.Type.IDENTIFIER);
-        String identifier = save().getData();
+        Token identifierToken = save();
         expect(":");
         ignore();
         if (accept(Token.Type.IDENTIFIER)) {
-            dataType = ASTLiteral.typeForName(save().getData());
-            if (dataType == null) {
+            identifierDataType = ASTLiteral.typeForName(save().getData());
+            if (identifierDataType == null) {
                 error("expected valid data type");
             }
         } else {
-            dataType = DataType.AUTO;
+            identifierDataType = DataType.AUTO;
         }
         if (accept(":")) {
             ignore();
@@ -71,21 +66,41 @@ public class Parser {
                     returnType = ASTLiteral.typeForName(save().getData());
                     if (returnType == null) {
                         error("expected valid data type");
+                    } else if (returnType == DataType.AUTO) {
+                        backup();
+                        error("return data type for function can not be auto");
                     }
                 }
                 expect(Token.Type.END_OF_STATEMENT);
                 ignore();
                 System.out.println("valid function header");
-                System.out.println(identifier);
+                System.out.println(identifierToken);
                 System.out.println(parameters);
                 System.out.println(returnType);
             } else {
-                // variable
-                System.out.println("read in expression for variable");
-                System.out.println("create variable with expression");
+                // Constant
+                ASTNode node = parseExpression();
+                DataType expressionDataType = typeCheckExpression(node);
+                if (identifierDataType == DataType.AUTO) {
+                    identifierDataType = expressionDataType;
+                } else if (identifierDataType != expressionDataType) {
+                    error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
+                }
+                return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
+                        new ASTVariable(identifierToken.getData(), null, identifierDataType, true, identifierToken.getLocation()),
+                        node, identifierToken.getLocation());
             }
-        } else if (dataType != DataType.AUTO) {
-            return new ASTVariable(identifier, ASTLiteral.defaultValueForType(dataType), dataType);
+        } else if (accept("=")) {
+            ASTNode node = parseExpression();
+            DataType expressionDataType = typeCheckExpression(node);
+            if (identifierDataType == DataType.AUTO) {
+                identifierDataType = expressionDataType;
+            } else if (identifierDataType != expressionDataType) {
+                error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
+            }
+            return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
+                    new ASTVariable(identifierToken.getData(), null, identifierDataType, false, identifierToken.getLocation()),
+                    node, identifierToken.getLocation());
         } else {
             error("data type auto with no expression");
         }
@@ -96,7 +111,7 @@ public class Parser {
         boolean operator = false;
         int parentheses = 0;
         while (!check(Token.Type.EOF, Token.Type.END_OF_STATEMENT) &&
-                !(parentheses == 0 && check(")")) && !check(",") ) {
+                !(parentheses == 0 && check(")")) && !check(",")) {
             if (accept("(")) {
                 if (!operator && !expressionStack.isEmpty()) {
                     backup();
@@ -104,8 +119,9 @@ public class Parser {
                 }
                 ++parentheses;
                 operator = true;
-                ignore();
-                operatorStack.push(ASTOperator.Type.OPEN_PARENTHESES);
+                Token t = save();
+                ASTOperator astOperator = new ASTOperator(ASTOperator.Type.OPEN_PARENTHESES, t.getLocation());
+                operatorStack.push(astOperator);
             }
 
             if (accept(Token.Type.LITERAL)) {
@@ -115,7 +131,7 @@ public class Parser {
                 }
                 operator = false;
                 Token t = save();
-                expressionStack.push(new ASTLiteral(makeLiteralType(t), t.getDataType()));
+                expressionStack.push(new ASTLiteral(makeLiteralType(t), t.getDataType(), t.getLocation()));
             }
 
             if (accept(")")) {
@@ -124,14 +140,15 @@ public class Parser {
                     backup();
                     break;
                 }
-                while (operatorStack.peek() != ASTOperator.Type.OPEN_PARENTHESES) {
+                while (!operatorStack.isEmpty() && operatorStack.peek().getType() != ASTOperator.Type.OPEN_PARENTHESES) {
                     popOperatorOntoExpressionStack();
                 }
                 operatorStack.pop();
             }
 
             if (accept(Token.Type.OPERATOR)) {
-                ASTOperator.Type op = ASTOperator.match(save().getData());
+                Token operatorToken = save();
+                ASTOperator.Type op = ASTOperator.match(operatorToken.getData());
                 if (op == null) {
                     backup();
                     error("not a valid operator");
@@ -147,16 +164,16 @@ public class Parser {
                 }
                 operator = true;
                 if (op.getAssociativity() == ASTOperator.Associativity.LEFT) {
-                    while (!operatorStack.isEmpty() && operatorStack.peek().getPrecedence() >= op.getPrecedence()) {
+                    while (!operatorStack.isEmpty() && operatorStack.peek().getType().getPrecedence() >= op.getPrecedence()) {
                         popOperatorOntoExpressionStack();
                     }
                 } else {
-                    while (!operatorStack.isEmpty() && operatorStack.peek().getPrecedence() > op.getPrecedence()) {
+                    while (!operatorStack.isEmpty() && operatorStack.peek().getType().getPrecedence() > op.getPrecedence()) {
                         popOperatorOntoExpressionStack();
                     }
                 }
 
-                operatorStack.push(op);
+                operatorStack.push(new ASTOperator(op, operatorToken.getLocation()));
             }
         }
         if (parentheses > 0) {
@@ -171,15 +188,72 @@ public class Parser {
         return expressionStack.pop();
     }
 
+    private DataType typeCheckExpression(ASTNode node) throws CompilerException {
+        if (node instanceof ASTVariable) {
+            return ((ASTVariable) node).getDataType();
+        } else if (node instanceof ASTLiteral) {
+            return ((ASTLiteral) node).getDataType();
+        } else if (node instanceof ASTFunction) {
+            return ((ASTFunction) node).getReturnDataType();
+        } else if (node instanceof ASTUnaryOperator) {
+            return typeCheckExpression(((ASTUnaryOperator) node).getSingleNode());
+        } else if (node instanceof ASTBinaryOperator) {
+            DataType left = typeCheckExpression(((ASTBinaryOperator) node).getLeft());
+            DataType right = typeCheckExpression(((ASTBinaryOperator) node).getRight());
+            if (left.equals(right)) {
+                return left;
+            } else {
+                error("type mismatch", node.getLocation());
+            }
+        }
+        assert false : "Node not supported";
+        return null;
+    }
+
+    private ASTLiteral solveExpressionIfPossible(ASTNode node) throws CompilerException {
+        if (node instanceof ASTVariable) {
+            return null;
+        } else if (node instanceof ASTLiteral) {
+            return (ASTLiteral) node;
+        }
+        if (node instanceof ASTBinaryOperator) {
+            ASTLiteral left = solveExpressionIfPossible(((ASTBinaryOperator) node).getLeft());
+            ASTLiteral right = solveExpressionIfPossible(((ASTBinaryOperator) node).getRight());
+            if (left == null || right == null) {
+                return null;
+            }
+
+            switch (((ASTBinaryOperator) node).getType()) {
+                case BINARY_ADD:
+                    break;
+            }
+        }
+
+    }
+
+    private ASTLiteral solveAdd(ASTLiteral left, ASTLiteral right) throws CompilerException {
+        switch (left.getDataType()) {
+            case BOOLEAN:
+                error("binary addition not allowed with boolean type");
+                break;
+            case INT:
+                return new ASTLiteral(left.getInt() + right.getInt(), DataType.INT, left.getLocation());
+            case FLOAT:
+                return new ASTLiteral(left.getFloat() + right.getFloat(), DataType.FLOAT, left.getLocation());
+            case DOUBLE:
+                return new ASTLiteral(left.getDouble() + right.getDouble(), DataType.DOUBLE, left.getLocation());
+        }
+    }
+
     private void popOperatorOntoExpressionStack() throws CompilerException {
-        ASTOperator.Type op = operatorStack.pop();
-        if (op.getGroup() == ASTOperator.Group.UNARY) {
+        ASTOperator astOperator = operatorStack.pop();
+        if (astOperator.getType().getGroup() == ASTOperator.Group.UNARY) {
             if (expressionStack.isEmpty()) {
                 error("expected operand");
             }
             ASTNode node = expressionStack.pop();
-            expressionStack.push(new ASTUnaryOperator(op, node));
-        } else if (op.getGroup() == ASTOperator.Group.BINARY) {
+            expressionStack.push(new ASTUnaryOperator(astOperator.getType(), node, astOperator.getLocation()));
+        } else if (astOperator.getType().getGroup() == ASTOperator.Group.BINARY) {
             if (expressionStack.size() < 2) {
                 error("expected operand");
             }
@@ -188,7 +262,7 @@ public class Parser {
             ASTNode rightNode = expressionStack.pop();
             ASTNode leftNode = expressionStack.pop();
 
-            expressionStack.push(new ASTBinaryOperator(op, leftNode, rightNode));
+            expressionStack.push(new ASTBinaryOperator(astOperator.getType(), leftNode, rightNode, astOperator.getLocation()));
         }
     }
 
@@ -225,6 +299,10 @@ public class Parser {
 
     private void error(String error) throws CompilerException {
         throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", peek().getLocation().getLine(), peek().getLocation().getColumn(), error, peek().getLocation().getFileName()));
+    }
+
+    private void error(String error, Location location) throws CompilerException {
+        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
     }
 
     private Token peek() {

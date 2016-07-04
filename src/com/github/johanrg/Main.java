@@ -23,8 +23,8 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            String source = readFile("/home/johan/sourcefile", Charset.forName("utf8"));
-            //String source = readFile("/home/johan/IdeaProjects/BananaScript/src/com/github/johanrg/compiler/Lexer.java", Charset.forName("utf8"));
+            //String source = readFile("/home/johan/sourcefile", Charset.forName("utf8"));
+            String source = readFile("z:/sourcefile.txt", Charset.forName("utf8"));
             Lexer lexer = new Lexer();
             lexer.lex("Lexer.java", source);
             lexer.getTokens().forEach(System.out::println);
