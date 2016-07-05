@@ -6,6 +6,9 @@ import com.github.johanrg.compiler.Parser;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class Main {
     public static String readFile(String file, Charset cs) throws IOException {

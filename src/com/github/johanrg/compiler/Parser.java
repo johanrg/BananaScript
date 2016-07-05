@@ -17,6 +17,8 @@ public class Parser {
     private final Stack<ASTNode> expressionStack = new Stack<>();
     private int start = 0;
     private int pos = 0;
+    private int previousBlockLevel = 0;
+    private int currentBlockLevel = 0;
 
     public Parser(List<Token> tokens) throws CompilerException {
         this.tokens = tokens;
@@ -24,7 +26,16 @@ public class Parser {
     }
 
     private void parse() throws CompilerException {
-        ASTNode node = parseIdentifierDeclarationStatement();
+        while (!eof()) {
+            if (checkIfDeclaration()) {
+                ASTNode node = parseIdentifierDeclarationStatement();
+            }
+            if (checkIfAssignment()) {
+                parseAssignment();
+            }
+
+            expect(Token.Type.END_OF_STATEMENT);
+        }
         //ASTNode first = parseExpression();
     }
 
@@ -32,7 +43,8 @@ public class Parser {
         DataType identifierDataType;
         expect(Token.Type.IDENTIFIER);
         Token identifierToken = save();
-        // check data type
+
+        // check if declaration
         expect(":");
         ignore();
         if (accept(Token.Type.IDENTIFIER)) {
@@ -194,6 +206,18 @@ public class Parser {
             error("expected expression");
         }
         return expressionStack.pop();
+    }
+
+    private ASTNode parseAssignment() throws CompilerException {
+        expect(Token.Type.IDENTIFIER);
+        Token identifierToken = save();
+        expect(Token.Type.OPERATOR);
+        Token operator = save();
+        if (ASTOperator.match(operator.getData()).getGroup() != ASTOperator.Group.ASSIGNMENT) {
+            error("expected assignment");
+        }
+        ASTNode node = parseExpression();
+        ASTBinaryOperator(ASTOperator.match(operator.getData()), )
     }
 
     private DataType typeCheckExpression(ASTNode node) throws CompilerException {
@@ -427,6 +451,17 @@ public class Parser {
         return null;
     }
 
+    private boolean checkIfDeclaration() {
+        boolean isDeclaration = accept(Token.Type.IDENTIFIER) && accept(":");
+        revert();
+        return isDeclaration;
+    }
+
+    private boolean checkIfAssignment() {
+        return accept(Token.Type.IDENTIFIER) &&
+                ASTOperator.match(peek().getData()).getGroup() == ASTOperator.Group.ASSIGNMENT;
+    }
+
     private boolean checkIfFunction() {
         boolean isFunction = accept("(") && accept(Token.Type.IDENTIFIER) && accept(":");
         revert();
@@ -443,6 +478,10 @@ public class Parser {
 
     private void error(String error, Location location) throws CompilerException {
         throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
+    }
+
+    private boolean eof() {
+        return check(Token.Type.EOF);
     }
 
     private Token peek() {
