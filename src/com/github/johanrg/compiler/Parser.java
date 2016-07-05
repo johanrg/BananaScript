@@ -2,12 +2,9 @@ package com.github.johanrg.compiler;
 
 import com.github.johanrg.ast.*;
 
-import javax.xml.crypto.Data;
-import javax.xml.datatype.DatatypeFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
-import java.util.function.BinaryOperator;
 
 /**
  * @author johan
@@ -35,6 +32,7 @@ public class Parser {
         DataType identifierDataType;
         expect(Token.Type.IDENTIFIER);
         Token identifierToken = save();
+        // check data type
         expect(":");
         ignore();
         if (accept(Token.Type.IDENTIFIER)) {
@@ -45,6 +43,7 @@ public class Parser {
         } else {
             identifierDataType = DataType.AUTO;
         }
+        // constant
         if (accept(":")) {
             ignore();
             if (checkIfFunction()) {
@@ -79,7 +78,7 @@ public class Parser {
                 System.out.println(parameters);
                 System.out.println(returnType);
             } else {
-                // Constant
+                // Constant identifier
                 ASTNode node = parseExpression();
                 DataType expressionDataType = typeCheckExpression(node);
                 if (identifierDataType == DataType.AUTO) {
@@ -91,6 +90,7 @@ public class Parser {
                         new ASTVariable(identifierToken.getData(), null, identifierDataType, true, identifierToken.getLocation()),
                         node, identifierToken.getLocation());
             }
+            //variable
         } else if (accept("=")) {
             ignore();
             ASTNode node = parseExpression();
@@ -100,7 +100,7 @@ public class Parser {
             } else if (identifierDataType != expressionDataType) {
                 error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
             }
-            ASTLiteral result = solveExpressionIfPossible(node);
+            ASTLiteral result = simplifyExpressionIfPossible(node);
             if (result == null) {
                 return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
                         new ASTVariable(identifierToken.getData(), null, identifierDataType, false, identifierToken.getLocation()),
@@ -218,12 +218,12 @@ public class Parser {
         return null;
     }
 
-    private ASTLiteral solveExpressionIfPossible(ASTNode node) throws CompilerException {
+    private ASTLiteral simplifyExpressionIfPossible(ASTNode node) throws CompilerException {
         if (node instanceof ASTLiteral) {
             return (ASTLiteral) node;
         } else if (node instanceof ASTBinaryOperator) {
-            ASTLiteral left = solveExpressionIfPossible(((ASTBinaryOperator) node).getLeft());
-            ASTLiteral right = solveExpressionIfPossible(((ASTBinaryOperator) node).getRight());
+            ASTLiteral left = simplifyExpressionIfPossible(((ASTBinaryOperator) node).getLeft());
+            ASTLiteral right = simplifyExpressionIfPossible(((ASTBinaryOperator) node).getRight());
             if (left == null || right == null) {
                 return null;
             }
@@ -239,8 +239,8 @@ public class Parser {
                     return solveDiv(left, right);
                 case BINARY_MOD:
                     return solveMod(left, right);
-                case BINARY_POWER:
-                    return solvePower(left, right);
+                case BINARY_POW:
+                    return solvePow(left, right);
             }
         }
         return null;
@@ -361,7 +361,7 @@ public class Parser {
         return null;
     }
 
-    private ASTLiteral solvePower(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private ASTLiteral solvePow(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary exponent not allowed with boolean type", left.getLocation());
