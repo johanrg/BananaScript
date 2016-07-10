@@ -44,7 +44,7 @@ public class Lexer {
     private int column;
     private Location location;
     private Token.Type tokenType;
-    private int blockLevel = 0;
+    private int scopeLevel = 0;
 
     /**
      * WIP params will change.
@@ -122,9 +122,9 @@ public class Lexer {
                 if (spaces % 4 != 0) {
                     error("indentation spaces must be in multiples of 4");
                 }
-                blockLevel = spaces / 4;
+                scopeLevel = spaces / 4;
             } else if (tabs > 0) {
-                blockLevel = tabs;
+                scopeLevel = tabs;
             }
         }
         while (accept(WHITESPACE)) ;
@@ -138,11 +138,14 @@ public class Lexer {
      * @return a new functional state.
      */
     private State handleNewLine() throws CompilerException {
-        while (accept(NEW_LINE)) {
+        if (accept(NEW_LINE)) {
+            if (column > 2) {
+                newToken(Token.Type.END_OF_STATEMENT);
+            }
             ++line;
             column = 1;
+            scopeLevel = 0;
         }
-        newToken(Token.Type.END_OF_STATEMENT);
         return this::lexStart;
     }
 
@@ -248,7 +251,7 @@ public class Lexer {
         } catch (NumberFormatException e) {
             error("bad hexadecimal syntax");
         }
-        tokens.add(new Token(Token.Type.LITERAL, DataType.INT, value, blockLevel, location));
+        tokens.add(new Token(Token.Type.LITERAL, DataType.INT, value, scopeLevel, location));
         ignore();
     }
 
@@ -256,7 +259,7 @@ public class Lexer {
         if (Character.isAlphabetic(peek())) {
             error("bad number syntax");
         }
-        tokens.add(new Token(Token.Type.LITERAL, dataType, source.substring(start, pos), blockLevel, location));
+        tokens.add(new Token(Token.Type.LITERAL, dataType, source.substring(start, pos), scopeLevel, location));
         ignore();
     }
 
@@ -378,7 +381,7 @@ public class Lexer {
      * @param type The type of token to be created.
      */
     private void newToken(Token.Type type) {
-        tokens.add(new Token(type, source.substring(start, pos), blockLevel, location));
+        tokens.add(new Token(type, source.substring(start, pos), scopeLevel, location));
         ignore();
     }
 

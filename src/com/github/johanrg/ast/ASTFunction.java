@@ -12,13 +12,13 @@ import java.util.List;
 public class ASTFunction extends ASTNode implements Identifier {
     private final String identifier;
     private final List<ASTNode> parameters;
-    private final ASTNode statement;
+    private final ASTCompoundStatement compoundStatement;
     private final DataType returnDataType;
 
-    public ASTFunction(String identifier, List<ASTNode> parameters, ASTNode statement, DataType returnDataType, Location location) {
+    public ASTFunction(String identifier, List<ASTNode> parameters, ASTCompoundStatement compoundStatement, DataType returnDataType, Location location) {
         super(location);
         this.parameters = parameters;
-        this.statement = statement;
+        this.compoundStatement = compoundStatement;
         this.identifier = identifier;
         this.returnDataType = returnDataType;
     }
@@ -31,8 +31,8 @@ public class ASTFunction extends ASTNode implements Identifier {
         return parameters;
     }
 
-    public ASTNode getStatement() {
-        return statement;
+    public ASTNode getCompoundStatement() {
+        return compoundStatement;
     }
 
     public DataType getReturnDataType() {

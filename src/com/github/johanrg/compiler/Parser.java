@@ -11,69 +11,75 @@ import java.util.Stack;
  * @since 2016-07-02.
  */
 public class Parser {
-    private ASTNode globalNode = null;
     private final List<Token> tokens;
+    private final Identifiers identifiers = new Identifiers();
     private final Stack<ASTOperator> operatorStack = new Stack<>();
     private final Stack<ASTNode> expressionStack = new Stack<>();
     private int start = 0;
     private int pos = 0;
-    private int previousBlockLevel = 0;
-    private int currentBlockLevel = 0;
+    private int currentScopeLevel = 0;
 
     public Parser(List<Token> tokens) throws CompilerException {
         this.tokens = tokens;
-        parse();
+        parseScope();
     }
 
-    private void parse() throws CompilerException {
-        while (!eof()) {
-            if (checkIfDeclaration()) {
-                ASTNode node = parseIdentifierDeclarationStatement();
-            }
-            if (checkIfAssignment()) {
-                parseAssignment();
-            }
-
-            expect(Token.Type.END_OF_STATEMENT);
+    private ASTNode parseStatement() throws CompilerException {
+        ASTNode node = null;
+        if (checkIfDeclaration()) {
+            node = parseIdentifierDefinitionStatement();
+        } else if (checkIfAssignment()) {
+            node = parseVariableAssignment();
         }
-        //ASTNode first = parseExpression();
+        return node;
     }
 
-    private ASTNode parseIdentifierDeclarationStatement() throws CompilerException {
+    private ASTCompoundStatement parseScope() throws CompilerException {
+        List<ASTNode> statements = new ArrayList<>();
+        identifiers.newScope();
+        while (!eof() && scopeDiff(0)) {
+            statements.add(parseStatement());
+            if (scopeDiff(1)) {
+                ++currentScopeLevel;
+                statements.add(parseScope());
+            }
+        }
+        --currentScopeLevel;
+        return new ASTCompoundStatement(statements, identifiers.popScope());
+    }
+
+    private ASTNode parseIdentifierDefinitionStatement() throws CompilerException {
         DataType identifierDataType;
         expect(Token.Type.IDENTIFIER);
         Token identifierToken = save();
 
         // check if declaration
         expect(":");
-        ignore();
+        Token dataTypeToken = null;
         if (accept(Token.Type.IDENTIFIER)) {
-            identifierDataType = ASTLiteral.typeForName(save().getData());
+            dataTypeToken = save();
+            identifierDataType = ASTLiteral.typeForName(dataTypeToken.getData());
             if (identifierDataType == null) {
-                error("expected valid data type");
+                error("invalid data type");
             }
         } else {
             identifierDataType = DataType.AUTO;
         }
         // constant
         if (accept(":")) {
-            ignore();
             if (checkIfFunction()) {
                 // read in parameter list
                 expect("(");
-                ignore();
                 List<ASTNode> parameters = new ArrayList<>();
                 while (!check(")") & !check(Token.Type.END_OF_STATEMENT, Token.Type.EOF)) {
-                    parameters.add(parseIdentifierDeclarationStatement());
+                    parameters.add(parseIdentifierDefinitionStatement());
                     while (accept(",")) {
-                        ignore();
-                        parameters.add(parseIdentifierDeclarationStatement());
+                        parameters.add(parseIdentifierDefinitionStatement());
                     }
                 }
                 expect(")");
-                DataType returnType = null;
+                DataType returnType = DataType.VOID;
                 if (accept("->")) {
-                    ignore();
                     expect(Token.Type.IDENTIFIER);
                     returnType = ASTLiteral.typeForName(save().getData());
                     if (returnType == null) {
@@ -84,44 +90,63 @@ public class Parser {
                     }
                 }
                 expect(Token.Type.END_OF_STATEMENT);
-                ignore();
-                System.out.println("valid function header");
-                System.out.println(identifierToken);
-                System.out.println(parameters);
-                System.out.println(returnType);
+                if (scopeDiff(1)) {
+                    ++currentScopeLevel;
+                    ASTCompoundStatement compoundStatement = parseScope();
+                    ASTFunction function = new ASTFunction(identifierToken.getData(), parameters, compoundStatement,
+                            returnType, identifierToken.getLocation());
+                    if (!identifiers.addIdentifier(function)) {
+                        error(String.format("'%s' is already defined in this scope.", identifierToken.getData()),
+                                identifierToken.getLocation());
+                    }
+                    return function;
+                } else {
+                    System.out.println("invalid scope");
+                }
             } else {
                 // Constant identifier
                 ASTNode node = parseExpression();
-                DataType expressionDataType = typeCheckExpression(node);
-                if (identifierDataType == DataType.AUTO) {
-                    identifierDataType = expressionDataType;
-                } else if (identifierDataType != expressionDataType) {
-                    error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
-                }
-                return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
-                        new ASTVariable(identifierToken.getData(), null, identifierDataType, true, identifierToken.getLocation()),
-                        node, identifierToken.getLocation());
+                expect(Token.Type.END_OF_STATEMENT);
+                return assignExpressionInVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+                        identifierDataType, node, true);
             }
             //variable
         } else if (accept("=")) {
-            ignore();
             ASTNode node = parseExpression();
-            DataType expressionDataType = typeCheckExpression(node);
-            if (identifierDataType == DataType.AUTO) {
-                identifierDataType = expressionDataType;
-            } else if (identifierDataType != expressionDataType) {
-                error(String.format("expected expression of type: '%s", identifierDataType.toString().toLowerCase()), node.getLocation());
-            }
-            ASTLiteral result = simplifyExpressionIfPossible(node);
-            if (result == null) {
-                return new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT,
-                        new ASTVariable(identifierToken.getData(), null, identifierDataType, false, identifierToken.getLocation()),
-                        node, identifierToken.getLocation());
-            } else {
-                return new ASTVariable(identifierToken.getData(), result.getValue(), identifierDataType, false, identifierToken.getLocation());
-            }
+            expect(Token.Type.END_OF_STATEMENT);
+            return assignExpressionInVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+                    identifierDataType, node, false);
         } else {
             error("data type auto with no expression");
+        }
+        return null;
+    }
+
+    private ASTNode parseVariableAssignment() throws CompilerException {
+        expect(Token.Type.IDENTIFIER);
+        Token identifierToken = save();
+        expect(Token.Type.OPERATOR);
+        Token operator = save();
+        ASTOperator.Type assignmentType = ASTOperator.match(operator.getData());
+        if (assignmentType != null && assignmentType.getGroup() != ASTOperator.Group.ASSIGNMENT) {
+            error("expected assignment");
+        }
+        ASTNode node = parseExpression();
+        expect(Token.Type.END_OF_STATEMENT);
+        Identifier identifier = identifiers.find(identifierToken.getData());
+        if (identifier != null) {
+            DataType identifierDataType = Expression.typeCheck((ASTNode) identifier);
+            DataType expressionDataType = Expression.typeCheck(node);
+            if (identifierDataType == expressionDataType) {
+                return new ASTBinaryOperator(assignmentType,
+                        (ASTNode) identifier,
+                        node, identifierToken.getLocation());
+
+            } else {
+                error("type mismatch", node.getLocation());
+            }
+        } else {
+            error(String.format("can not resolve symbol '%s'", identifierToken.getData()), identifierToken.getLocation());
         }
         return null;
     }
@@ -149,12 +174,25 @@ public class Parser {
                     error("did not expect literal");
                 }
                 operator = false;
-                Token t = save();
-                expressionStack.push(new ASTLiteral(makeLiteralType(t), t.getDataType(), t.getLocation()));
+                Token token = save();
+                expressionStack.push(new ASTLiteral(makeLiteralType(token), token.getDataType(), token.getLocation()));
+            }
+
+            if (accept(Token.Type.IDENTIFIER)) {
+                Token token = save();
+                Identifier identifier = identifiers.find((token.getData()));
+                if (identifier != null) {
+                    if (identifier instanceof ASTVariable) {
+                        expressionStack.push((ASTVariable) identifier);
+                    } else if (identifier instanceof ASTFunction) {
+                        expressionStack.push((ASTFunction) identifier);
+                    } else {
+                        error(String.format("Not a valid type '%s'", token.getData()), token.getLocation());
+                    }
+                }
             }
 
             if (accept(")")) {
-                ignore();
                 --parentheses;
                 if (parentheses < 0) {
                     backup();
@@ -184,11 +222,13 @@ public class Parser {
                 }
                 operator = true;
                 if (op.getAssociativity() == ASTOperator.Associativity.LEFT) {
-                    while (!operatorStack.isEmpty() && operatorStack.peek().getType().getPrecedence() >= op.getPrecedence()) {
+                    while (!operatorStack.isEmpty() &&
+                            operatorStack.peek().getType().getPrecedence() >= op.getPrecedence()) {
                         popOperatorOntoExpressionStack();
                     }
                 } else {
-                    while (!operatorStack.isEmpty() && operatorStack.peek().getType().getPrecedence() > op.getPrecedence()) {
+                    while (!operatorStack.isEmpty() &&
+                            operatorStack.peek().getType().getPrecedence() > op.getPrecedence()) {
                         popOperatorOntoExpressionStack();
                     }
                 }
@@ -208,204 +248,26 @@ public class Parser {
         return expressionStack.pop();
     }
 
-    private ASTNode parseAssignment() throws CompilerException {
-        expect(Token.Type.IDENTIFIER);
-        Token identifierToken = save();
-        expect(Token.Type.OPERATOR);
-        Token operator = save();
-        if (ASTOperator.match(operator.getData()).getGroup() != ASTOperator.Group.ASSIGNMENT) {
-            error("expected assignment");
+    private ASTNode assignExpressionInVariableDefinition(ASTOperator.Type assignmentType, Token identifierToken,
+                                                         Token dataTypeToken, DataType identifierDataType, ASTNode node,
+                                                         boolean constant) throws CompilerException {
+        ASTNode result = null;
+        identifierDataType = Expression.typeCheckVsDataType(node, dataTypeToken, identifierDataType);
+        ASTLiteral expression = Expression.simplifyExpressionIfPossible(node);
+        if (expression != null) {
+            node = expression;
         }
-        ASTNode node = parseExpression();
-        ASTBinaryOperator(ASTOperator.match(operator.getData()), )
-    }
-
-    private DataType typeCheckExpression(ASTNode node) throws CompilerException {
-        if (node instanceof ASTVariable) {
-            return ((ASTVariable) node).getDataType();
-        } else if (node instanceof ASTLiteral) {
-            return ((ASTLiteral) node).getDataType();
-        } else if (node instanceof ASTFunction) {
-            return ((ASTFunction) node).getReturnDataType();
-        } else if (node instanceof ASTUnaryOperator) {
-            return typeCheckExpression(((ASTUnaryOperator) node).getSingleNode());
-        } else if (node instanceof ASTBinaryOperator) {
-            DataType left = typeCheckExpression(((ASTBinaryOperator) node).getLeft());
-            DataType right = typeCheckExpression(((ASTBinaryOperator) node).getRight());
-            if (left.equals(right)) {
-                return left;
-            } else {
-                error("type mismatch", node.getLocation());
-            }
+        ASTVariable variable = new ASTVariable(identifierToken.getData(), null, identifierDataType, constant,
+                identifierToken.getLocation());
+        if (identifiers.addIdentifier(variable)) {
+            result = new ASTBinaryOperator(assignmentType,
+                    variable,
+                    node, identifierToken.getLocation());
+        } else {
+            error(String.format("'%s' is already defined in this scope.", identifierToken.getData()),
+                    identifierToken.getLocation());
         }
-        assert false : "Node not supported";
-        return null;
-    }
-
-    private ASTLiteral simplifyExpressionIfPossible(ASTNode node) throws CompilerException {
-        if (node instanceof ASTLiteral) {
-            return (ASTLiteral) node;
-        } else if (node instanceof ASTBinaryOperator) {
-            ASTLiteral left = simplifyExpressionIfPossible(((ASTBinaryOperator) node).getLeft());
-            ASTLiteral right = simplifyExpressionIfPossible(((ASTBinaryOperator) node).getRight());
-            if (left == null || right == null) {
-                return null;
-            }
-
-            switch (((ASTBinaryOperator) node).getType()) {
-                case BINARY_ADD:
-                    return solveAdd(left, right);
-                case BINARY_SUB:
-                    return solveSub(left, right);
-                case BINARY_MUL:
-                    return solveMul(left, right);
-                case BINARY_DIV:
-                    return solveDiv(left, right);
-                case BINARY_MOD:
-                    return solveMod(left, right);
-                case BINARY_POW:
-                    return solvePow(left, right);
-            }
-        }
-        return null;
-    }
-
-    private ASTLiteral solveAdd(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary addition not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral(left.getInt() + right.getInt(), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral(left.getFloat() + right.getFloat(), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(left.getDouble() + right.getDouble(), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary additon not allwoed with char type");
-                break;
-            case STRING:
-                return new ASTLiteral(left.getString() + right.getString(), DataType.STRING, left.getLocation());
-            default:
-                assert false : "binary add does not support this type.";
-        }
-        return null;
-    }
-
-    private ASTLiteral solveSub(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary subtraction not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral(left.getInt() - right.getInt(), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral(left.getFloat() - right.getFloat(), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(left.getDouble() - right.getDouble(), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary subtractions not allowed with char");
-                break;
-            case STRING:
-                error("binary subtractions not allowed with string", left.getLocation());
-                break;
-            default:
-                assert false : "binary subtraction does not support this type";
-        }
-        return null;
-    }
-
-
-    private ASTLiteral solveMul(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary multiplication not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral(left.getInt() * right.getInt(), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral(left.getFloat() * right.getFloat(), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(left.getDouble() * right.getDouble(), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary multiplication not allowed with char");
-                break;
-            case STRING:
-                error("binary multiplication not allowed with string", left.getLocation());
-                break;
-            default:
-                assert false : "binary multiplication does not support this type";
-        }
-        return null;
-    }
-
-    private ASTLiteral solveDiv(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary division not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral(left.getInt() / right.getInt(), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral(left.getFloat() / right.getFloat(), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(left.getDouble() / right.getDouble(), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary division not allowed with char");
-                break;
-            case STRING:
-                error("binary division not allowed with string", left.getLocation());
-                break;
-            default:
-                assert false : "binary division does not support this type";
-        }
-        return null;
-    }
-
-    private ASTLiteral solveMod(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary modulus not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral(left.getInt() % right.getInt(), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral(left.getFloat() % right.getFloat(), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(left.getDouble() % right.getDouble(), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary modulus not allowed with char");
-                break;
-            case STRING:
-                error("binary modulus not allowed with string", left.getLocation());
-                break;
-            default:
-                assert false : "binary modulus does not support this type";
-        }
-        return null;
-    }
-
-    private ASTLiteral solvePow(ASTLiteral left, ASTLiteral right) throws CompilerException {
-        switch (left.getDataType()) {
-            case BOOLEAN:
-                error("binary exponent not allowed with boolean type", left.getLocation());
-                break;
-            case INT:
-                return new ASTLiteral((int) Math.pow((double) left.getInt(), (double) right.getInt()), DataType.INT, left.getLocation());
-            case FLOAT:
-                return new ASTLiteral((float) Math.pow(left.getFloat(), right.getFloat()), DataType.FLOAT, left.getLocation());
-            case DOUBLE:
-                return new ASTLiteral(Math.pow(left.getDouble(), right.getDouble()), DataType.DOUBLE, left.getLocation());
-            case CHAR:
-                error("binary exponent not allowed with char");
-                break;
-            case STRING:
-                error("binary exponent not allowed with string", left.getLocation());
-                break;
-            default:
-                assert false : "binary exponent does not support this type";
-        }
-        return null;
+        return result;
     }
 
     private void popOperatorOntoExpressionStack() throws CompilerException {
@@ -426,7 +288,8 @@ public class Parser {
             ASTNode rightNode = expressionStack.pop();
             ASTNode leftNode = expressionStack.pop();
 
-            expressionStack.push(new ASTBinaryOperator(astOperator.getType(), leftNode, rightNode, astOperator.getLocation()));
+            expressionStack.push(new ASTBinaryOperator(astOperator.getType(), leftNode, rightNode,
+                    astOperator.getLocation()));
         }
     }
 
@@ -451,18 +314,29 @@ public class Parser {
         return null;
     }
 
-    private boolean checkIfDeclaration() {
+    private boolean checkIfDeclaration() throws CompilerException {
+        bookmark();
         boolean isDeclaration = accept(Token.Type.IDENTIFIER) && accept(":");
         revert();
         return isDeclaration;
     }
 
-    private boolean checkIfAssignment() {
-        return accept(Token.Type.IDENTIFIER) &&
-                ASTOperator.match(peek().getData()).getGroup() == ASTOperator.Group.ASSIGNMENT;
+    private boolean checkIfAssignment() throws CompilerException {
+        bookmark();
+        boolean isAssignment = false;
+        if (accept(Token.Type.IDENTIFIER)) {
+            ASTOperator.Type assignment = ASTOperator.match(next().getData());
+            if (assignment != null) {
+                isAssignment = assignment.getGroup() == ASTOperator.Group.ASSIGNMENT;
+            }
+
+        }
+        revert();
+        return isAssignment;
     }
 
-    private boolean checkIfFunction() {
+    private boolean checkIfFunction() throws CompilerException {
+        bookmark();
         boolean isFunction = accept("(") && accept(Token.Type.IDENTIFIER) && accept(":");
         revert();
         if (!isFunction) {
@@ -473,42 +347,61 @@ public class Parser {
     }
 
     private void error(String error) throws CompilerException {
-        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", peek().getLocation().getLine(), peek().getLocation().getColumn(), error, peek().getLocation().getFileName()));
+        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", peek().getLocation().getLine(),
+                peek().getLocation().getColumn(), error, peek().getLocation().getFileName()));
     }
 
     private void error(String error, Location location) throws CompilerException {
-        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
+        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(),
+                error, location.getFileName()));
     }
 
-    private boolean eof() {
+    private void checkScope(Token token) throws CompilerException {
+        int diff = currentScopeLevel - token.getScopeLevel();
+        if (diff > 1 || diff < -1) {
+            error("illegal scope change", token.getLocation());
+        }
+    }
+
+    private boolean scopeDiff(int level) throws CompilerException {
+        int diff = peek().getScopeLevel() - currentScopeLevel;
+        return diff == level;
+    }
+
+    private boolean eof() throws CompilerException {
         return check(Token.Type.EOF);
     }
 
-    private Token peek() {
-        return tokens.get(pos);
+    private Token peek() throws CompilerException {
+        Token token = tokens.get(pos);
+        checkScope(token);
+        return token;
     }
 
-    private Token next() {
-        return tokens.get(pos++);
+    private Token next() throws CompilerException {
+        Token token = tokens.get(pos++);
+        checkScope(token);
+        currentScopeLevel = token.getScopeLevel();
+        return token;
     }
 
     private void backup() {
         --pos;
     }
 
+    private void bookmark() {
+        start = pos;
+    }
+
     private void revert() {
         pos = start;
     }
 
-    private void ignore() {
-        start = pos;
-    }
-
     private Token save() {
-        return tokens.get(start++);
+        return tokens.get(pos - 1);
     }
 
-    private boolean accept(Token.Type... valid) {
+    private boolean accept(Token.Type... valid) throws CompilerException {
         Token t = next();
         for (Token.Type v : valid) {
             if (t.getType() == v) {
@@ -519,7 +412,7 @@ public class Parser {
         return false;
     }
 
-    private boolean accept(String... valid) {
+    private boolean accept(String... valid) throws CompilerException {
         String t = next().getData();
         for (String v : valid) {
             if (t.equals(v)) {
@@ -530,7 +423,7 @@ public class Parser {
         return false;
     }
 
-    private boolean check(Token.Type... valid) {
+    private boolean check(Token.Type... valid) throws CompilerException {
         Token t = peek();
         for (Token.Type v : valid) {
             if (t.getType() == v) {
@@ -540,7 +433,7 @@ public class Parser {
         return false;
     }
 
-    private boolean check(String... valid) {
+    private boolean check(String... valid) throws CompilerException {
         String t = peek().getData();
         for (String v : valid) {
             if (t.equals(v)) {
@@ -560,13 +453,13 @@ public class Parser {
         return false;
     }
 
-    private boolean expect(String expected) throws CompilerException {
+    private boolean expect(String valid) throws CompilerException {
         String t = next().getData();
-        if (t.equals(expected)) {
+        if (t.equals(valid)) {
             return true;
         }
         backup();
-        error(String.format("expected '%s'", expected));
+        error(String.format("expected '%s'", valid));
         return false;
     }
 }

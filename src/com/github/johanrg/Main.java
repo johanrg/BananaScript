@@ -37,9 +37,7 @@ public class Main {
                 Parser parser = new Parser(lexer.getTokens());
 
             }
-        } catch (CompilerException e) {
-            System.err.println(e.getMessage());
-        } catch (IOException e) {
+        } catch (CompilerException | IOException e) {
             System.err.println(e.getMessage());
         }
     }
