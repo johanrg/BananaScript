@@ -17,7 +17,7 @@ public class Parser {
     private final Stack<ASTNode> expressionStack = new Stack<>();
     private int start = 0;
     private int pos = 0;
-    private int currentScopeLevel = 0;
+    private int currentScopeLevel = -1;
 
     public Parser(List<Token> tokens) throws CompilerException {
         this.tokens = tokens;
@@ -38,18 +38,18 @@ public class Parser {
         return node;
     }
 
-    private ASTCompoundStatement parseScope() throws CompilerException {
+    private ASTScope parseScope() throws CompilerException {
         List<ASTNode> statements = new ArrayList<>();
         identifiers.newScope();
+        ++currentScopeLevel;
         while (!eof() && scopeDiff(0)) {
             statements.add(parseStatement());
             if (scopeDiff(1)) {
-                ++currentScopeLevel;
                 statements.add(parseScope());
             }
         }
         --currentScopeLevel;
-        return new ASTCompoundStatement(statements, identifiers.popScope());
+        return new ASTScope(statements, identifiers.popScope());
     }
 
     private ASTNode parseIdentifierDefinitionStatement() throws CompilerException {
@@ -94,8 +94,7 @@ public class Parser {
                 }
                 expect(Token.Type.END_OF_STATEMENT);
                 if (scopeDiff(1)) {
-                    ++currentScopeLevel;
-                    ASTCompoundStatement compoundStatement = parseScope();
+                    ASTScope compoundStatement = parseScope();
                     ASTFunction function = new ASTFunction(identifierToken.getData(), parameters, compoundStatement,
                             returnType, identifierToken.getLocation());
                     if (!identifiers.addIdentifier(function)) {
@@ -262,16 +261,14 @@ public class Parser {
         }
         expect(Token.Type.END_OF_STATEMENT);
         eofNotExpected();
-        ++currentScopeLevel;
-        ASTCompoundStatement ifScope = parseScope();
+        ASTScope ifScope = parseScope();
         if (ifScope.getStatements().size() == 0) {
             error("if scope expected");
         }
-        ASTCompoundStatement elseScope = null;
+        ASTScope elseScope = null;
         if (accept(Symbols.Keyword.ELSE)) {
             expect(Token.Type.END_OF_STATEMENT);
             eofNotExpected();
-            ++currentScopeLevel;
             elseScope = parseScope();
             if (elseScope.getStatements().size() == 0) {
                 error("else scope expected");
@@ -289,9 +286,8 @@ public class Parser {
         }
         expect(Token.Type.END_OF_STATEMENT);
         eofNotExpected();
-        ++currentScopeLevel;
-        ASTNode whileScope = parseScope();
-        return null;
+        ASTScope whileScope = parseScope();
+        return new ASTWhileStatement(expression, whileScope, whileToken.getLocation());
     }
 
     private ASTNode assignExpressionToVariableDefinition(ASTOperator.Type assignmentType, Token identifierToken,

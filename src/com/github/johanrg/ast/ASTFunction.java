@@ -12,10 +12,10 @@ import java.util.List;
 public class ASTFunction extends ASTNode implements Identifier {
     private final String identifier;
     private final List<ASTNode> parameters;
-    private final ASTCompoundStatement functionStatement;
+    private final ASTScope functionStatement;
     private final DataType returnDataType;
 
-    public ASTFunction(String identifier, List<ASTNode> parameters, ASTCompoundStatement functionStatement, DataType returnDataType, Location location) {
+    public ASTFunction(String identifier, List<ASTNode> parameters, ASTScope functionStatement, DataType returnDataType, Location location) {
         super(location);
         this.parameters = parameters;
         this.functionStatement = functionStatement;

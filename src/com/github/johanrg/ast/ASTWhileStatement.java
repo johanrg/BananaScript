@@ -6,11 +6,11 @@ import com.github.johanrg.compiler.Location;
  * @author Johan Gustafsson
  * @since 7/11/2016.
  */
-public class ASTWhile extends ASTNode {
+public class ASTWhileStatement extends ASTNode {
    private final ASTNode expression;
-   private final ASTCompoundStatement whileScope;
+   private final ASTScope whileScope;
 
-   public ASTWhile(ASTNode expression, ASTCompoundStatement whileScope, Location location) {
+   public ASTWhileStatement(ASTNode expression, ASTScope whileScope, Location location) {
       super(location);
       this.expression = expression;
       this.whileScope = whileScope;
@@ -20,7 +20,7 @@ public class ASTWhile extends ASTNode {
       return expression;
    }
 
-   public ASTCompoundStatement getWhileScope() {
+   public ASTScope getWhileScope() {
       return whileScope;
    }
 }
