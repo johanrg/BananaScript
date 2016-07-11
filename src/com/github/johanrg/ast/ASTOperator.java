@@ -8,8 +8,8 @@ import com.github.johanrg.compiler.Location;
  */
 public class ASTOperator extends ASTNode {
     public enum Associativity {
-        LEFT,
-        RIGHT;
+        LEFT_TO_RIGHT,
+        RIGHT_TO_LEFT;
     }
     public enum Group {
         ASSIGNMENT,
@@ -19,38 +19,43 @@ public class ASTOperator extends ASTNode {
         DELIMITER;
     }
     public enum Type {
-        ASSIGNMENT("=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
-        ADD_ASSIGNMENT("+=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
-        SUB_ASSIGNMENT("-=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
-        MUL_ASSIGNMENT("*=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
-        DIV_ASSIGNMENT("/=", Group.ASSIGNMENT, 1, Associativity.RIGHT),
+        ASSIGNMENT("=", Group.ASSIGNMENT, 1, Associativity.RIGHT_TO_LEFT),
+        ADD_ASSIGNMENT("+=", Group.ASSIGNMENT, 1, Associativity.RIGHT_TO_LEFT),
+        SUB_ASSIGNMENT("-=", Group.ASSIGNMENT, 1, Associativity.RIGHT_TO_LEFT),
+        MUL_ASSIGNMENT("*=", Group.ASSIGNMENT, 1, Associativity.RIGHT_TO_LEFT),
+        DIV_ASSIGNMENT("/=", Group.ASSIGNMENT, 1, Associativity.RIGHT_TO_LEFT),
 
-        LOGICAL_OR("||", Group.BINARY, 3, Associativity.LEFT),
-        LOGICAL_AND("&&", Group.BINARY, 4, Associativity.LEFT),
+        LOGICAL_OR("||", Group.BINARY, 3, Associativity.LEFT_TO_RIGHT),
+        LOGICAL_AND("&&", Group.BINARY, 4, Associativity.LEFT_TO_RIGHT),
 
-        RELATIONAL_EQUAL("==", Group.RELATIONAL, 8, Associativity.LEFT),
-        RELATIONAL_NOT_EQUAL("!=", Group.RELATIONAL, 8, Associativity.LEFT),
+        RELATIONAL_EQUAL("==", Group.RELATIONAL, 8, Associativity.LEFT_TO_RIGHT),
+        RELATIONAL_NOT_EQUAL("!=", Group.RELATIONAL, 8, Associativity.LEFT_TO_RIGHT),
 
-        BINARY_ADD("+", Group.BINARY, 11, Associativity.LEFT),
-        BINARY_SUB("-", Group.BINARY, 11, Associativity.LEFT),
+        RELATIONAL_LT("<", Group.RELATIONAL, 9, Associativity.LEFT_TO_RIGHT),
+        RELATIONAL_LTE("<=", Group.RELATIONAL, 9, Associativity.LEFT_TO_RIGHT),
+        RELATIONAL_GT(">", Group.RELATIONAL, 9, Associativity.LEFT_TO_RIGHT),
+        RELATIONAL_GTE(">=", Group.RELATIONAL, 9, Associativity.LEFT_TO_RIGHT),
 
-        BINARY_DIV("/", Group.BINARY, 12, Associativity.LEFT),
-        BINARY_MOD("%", Group.BINARY, 12, Associativity.LEFT),
-        BINARY_MUL("*", Group.BINARY, 12, Associativity.LEFT),
+        BINARY_ADD("+", Group.BINARY, 11, Associativity.LEFT_TO_RIGHT),
+        BINARY_SUB("-", Group.BINARY, 11, Associativity.LEFT_TO_RIGHT),
 
-        UNARY_PLUS("+", Group.UNARY, 13, Associativity.RIGHT),
-        UNARY_MINUS("-", Group.UNARY, 13, Associativity.RIGHT),
-        UNARY_LOGICAL_NEGATION("!", Group.UNARY, 13, Associativity.RIGHT),
-        UNARY_PRE_INCREMENT("++", Group.UNARY, 13, Associativity.RIGHT),
-        UNARY_PRE_DECREMENT("--", Group.UNARY, 13, Associativity.RIGHT),
+        BINARY_DIV("/", Group.BINARY, 12, Associativity.LEFT_TO_RIGHT),
+        BINARY_MOD("%", Group.BINARY, 12, Associativity.LEFT_TO_RIGHT),
+        BINARY_MUL("*", Group.BINARY, 12, Associativity.LEFT_TO_RIGHT),
 
-        BINARY_POW("^", Group.BINARY, 13, Associativity.RIGHT),
+        UNARY_PLUS("+", Group.UNARY, 13, Associativity.RIGHT_TO_LEFT),
+        UNARY_MINUS("-", Group.UNARY, 13, Associativity.RIGHT_TO_LEFT),
+        UNARY_LOGICAL_NEGATION("!", Group.UNARY, 13, Associativity.RIGHT_TO_LEFT),
+        UNARY_PRE_INCREMENT("++", Group.UNARY, 13, Associativity.RIGHT_TO_LEFT),
+        UNARY_PRE_DECREMENT("--", Group.UNARY, 13, Associativity.RIGHT_TO_LEFT),
 
-        UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT),
-        UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT),
+        BINARY_POW("^", Group.BINARY, 13, Associativity.RIGHT_TO_LEFT),
 
-        OPEN_PARENTHESES("(", Group.DELIMITER, 0, Associativity.LEFT),
-        CLOSE_PARENTHESES(")", Group.DELIMITER, 0, Associativity.LEFT);
+        UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT_TO_LEFT),
+        UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT_TO_LEFT),
+
+        OPEN_PARENTHESES("(", Group.DELIMITER, 0, Associativity.LEFT_TO_RIGHT),
+        CLOSE_PARENTHESES(")", Group.DELIMITER, 0, Associativity.LEFT_TO_RIGHT);
 
         private final String symbol;
         private final Group group;

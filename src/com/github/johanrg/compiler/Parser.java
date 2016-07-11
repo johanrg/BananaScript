@@ -30,6 +30,10 @@ public class Parser {
             node = parseIdentifierDefinitionStatement();
         } else if (checkIfAssignment()) {
             node = parseVariableAssignment();
+        } else if (check(Symbols.Keyword.IF)) {
+            node = parseIfStatement();
+        } else if (check(Symbols.Keyword.WHILE)) {
+            node = parseWhileStatement();
         }
         return node;
     }
@@ -53,7 +57,6 @@ public class Parser {
         expect(Token.Type.IDENTIFIER);
         Token identifierToken = save();
 
-        // check if declaration
         expect(":");
         Token dataTypeToken = null;
         if (accept(Token.Type.IDENTIFIER)) {
@@ -65,10 +68,10 @@ public class Parser {
         } else {
             identifierDataType = DataType.AUTO;
         }
-        // constant
+        // NOTE(Johan): double :: is constant value
         if (accept(":")) {
             if (checkIfFunction()) {
-                // read in parameter list
+                // NOTE(Johan): read in parameter list
                 expect("(");
                 List<ASTNode> parameters = new ArrayList<>();
                 while (!check(")") & !check(Token.Type.END_OF_STATEMENT, Token.Type.EOF)) {
@@ -104,17 +107,17 @@ public class Parser {
                     System.out.println("invalid scope");
                 }
             } else {
-                // Constant identifier
+                // NOTE(Johan): Constant identifier
                 ASTNode node = parseExpression();
                 expect(Token.Type.END_OF_STATEMENT);
-                return assignExpressionInVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+                return assignExpressionToVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
                         identifierDataType, node, true);
             }
-            //variable
+            // NOTE(Johan): variable
         } else if (accept("=")) {
             ASTNode node = parseExpression();
             expect(Token.Type.END_OF_STATEMENT);
-            return assignExpressionInVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+            return assignExpressionToVariableDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
                     identifierDataType, node, false);
         } else {
             error("data type auto with no expression");
@@ -181,13 +184,15 @@ public class Parser {
             if (accept(Token.Type.IDENTIFIER)) {
                 Token token = save();
                 Identifier identifier = identifiers.find((token.getData()));
-                if (identifier != null) {
+                if (identifier == null) {
+                    error("unknown identifier");
+                } else {
                     if (identifier instanceof ASTVariable) {
                         expressionStack.push((ASTVariable) identifier);
                     } else if (identifier instanceof ASTFunction) {
                         expressionStack.push((ASTFunction) identifier);
                     } else {
-                        error(String.format("Not a valid type '%s'", token.getData()), token.getLocation());
+                        error(String.format("not a valid type '%s'", token.getData()), token.getLocation());
                     }
                 }
             }
@@ -221,7 +226,7 @@ public class Parser {
                     }
                 }
                 operator = true;
-                if (op.getAssociativity() == ASTOperator.Associativity.LEFT) {
+                if (op.getAssociativity() == ASTOperator.Associativity.LEFT_TO_RIGHT) {
                     while (!operatorStack.isEmpty() &&
                             operatorStack.peek().getType().getPrecedence() >= op.getPrecedence()) {
                         popOperatorOntoExpressionStack();
@@ -248,7 +253,48 @@ public class Parser {
         return expressionStack.pop();
     }
 
-    private ASTNode assignExpressionInVariableDefinition(ASTOperator.Type assignmentType, Token identifierToken,
+    private ASTNode parseIfStatement() throws CompilerException {
+        expect(Symbols.Keyword.IF);
+        Token ifToken = save();
+        ASTNode expression = parseExpression();
+        if (Expression.typeCheck(expression) != DataType.BOOLEAN) {
+           error("expected boolean expression", expression.getLocation());
+        }
+        expect(Token.Type.END_OF_STATEMENT);
+        eofNotExpected();
+        ++currentScopeLevel;
+        ASTCompoundStatement ifScope = parseScope();
+        if (ifScope.getStatements().size() == 0) {
+            error("if scope expected");
+        }
+        ASTCompoundStatement elseScope = null;
+        if (accept(Symbols.Keyword.ELSE)) {
+            expect(Token.Type.END_OF_STATEMENT);
+            eofNotExpected();
+            ++currentScopeLevel;
+            elseScope = parseScope();
+            if (elseScope.getStatements().size() == 0) {
+                error("else scope expected");
+            }
+        }
+        return new ASTIfStatement(expression, ifScope, elseScope, ifToken.getLocation());
+    }
+
+    private ASTNode parseWhileStatement() throws CompilerException {
+        expect(Symbols.Keyword.WHILE);
+        Token whileToken = save();
+        ASTNode expression = parseExpression();
+        if (Expression.typeCheck(expression) != DataType.BOOLEAN) {
+            error("expected boolean expression", expression.getLocation());
+        }
+        expect(Token.Type.END_OF_STATEMENT);
+        eofNotExpected();
+        ++currentScopeLevel;
+        ASTNode whileScope = parseScope();
+        return null;
+    }
+
+    private ASTNode assignExpressionToVariableDefinition(ASTOperator.Type assignmentType, Token identifierToken,
                                                          Token dataTypeToken, DataType identifierDataType, ASTNode node,
                                                          boolean constant) throws CompilerException {
         ASTNode result = null;
@@ -278,8 +324,7 @@ public class Parser {
             }
             ASTNode node = expressionStack.pop();
             expressionStack.push(new ASTUnaryOperator(astOperator.getType(), node, astOperator.getLocation()));
-        } else if (astOperator.getType().getGroup() == ASTOperator.Group.BINARY ||
-                astOperator.getType().getGroup() == ASTOperator.Group.ASSIGNMENT) {
+        } else {
             if (expressionStack.size() < 2) {
                 error("expected operand");
             }
@@ -372,6 +417,12 @@ public class Parser {
         return check(Token.Type.EOF);
     }
 
+    private void eofNotExpected() throws CompilerException {
+        if (check(Token.Type.EOF)) {
+            error("unexpected end of file");
+        }
+    }
+
     private Token peek() throws CompilerException {
         Token token = tokens.get(pos);
         checkScope(token);
@@ -412,6 +463,15 @@ public class Parser {
         return false;
     }
 
+    private boolean accept(Symbols.Keyword valid) throws CompilerException {
+        Token t = next();
+        if (t.getKeyword() == valid) {
+            return true;
+        }
+        backup();
+        return false;
+    }
+
     private boolean accept(String... valid) throws CompilerException {
         String t = next().getData();
         for (String v : valid) {
@@ -433,6 +493,10 @@ public class Parser {
         return false;
     }
 
+    private boolean check(Symbols.Keyword valid) throws CompilerException {
+        return peek().getKeyword() == valid;
+    }
+
     private boolean check(String... valid) throws CompilerException {
         String t = peek().getData();
         for (String v : valid) {
@@ -440,6 +504,16 @@ public class Parser {
                 return true;
             }
         }
+        return false;
+    }
+
+    private boolean expect(Symbols.Keyword valid) throws CompilerException {
+        Token t = next();
+        if (t.getKeyword() == valid) {
+            return true;
+        }
+        backup();
+        error(String.format("expected '%s", valid.toString().toLowerCase()));
         return false;
     }
 

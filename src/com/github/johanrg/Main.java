@@ -6,12 +6,10 @@ import com.github.johanrg.compiler.Parser;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class Main {
-    public static String readFile(String file, Charset cs) throws IOException {
+     static String readFile(String file, Charset cs) throws IOException {
         try (FileInputStream stream = new FileInputStream(file)) {
             Reader reader = new BufferedReader(new InputStreamReader(stream, cs));
             StringBuilder builder = new StringBuilder();

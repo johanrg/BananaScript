@@ -20,19 +20,19 @@ public class Lexer {
     }
 
     // Constants
-    private final char EOF = '\0';
-    private final char NEW_LINE = '\n';
-    private final char CITATION = '"';
-    private final char APOSTROPHE = '\'';
-    private final char BACKSLASH = '\\';
-    private final char[] WHITESPACE = new char[]{' ', '\t', '\r', '\b', '\f'};
-    private final char[] ESCAPED_CHAR = new char[]{'t', 'r', 'n', 'b', 'f'};
-    private final char[] DECIMAL_RANGE = new char[]{'0', '9'};
-    private final char[] HEXADECIMAL_RANGE = new char[]{'0', '9', 'a', 'f', 'A', 'F'};
-    private final char[] ALPHA_RANGE = new char[]{'a', 'z', 'A', 'Z', '_', '_'};
-    private final char[] ALPHANUMERIC_RANGE = new char[]{'a', 'z', 'A', 'Z', '0', '9', '_', '_'};
-    private final char[] DELIMITER = new char[]{',', ':', '[', ']', '{', '}', '(', ')', '.', ';', '@'};
-    private final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>', '^'};
+    private static final char EOF = '\0';
+    private static final char NEW_LINE = '\n';
+    private static final char CITATION = '"';
+    private static final char APOSTROPHE = '\'';
+    private static final char BACKSLASH = '\\';
+    private static final char[] WHITESPACE = new char[]{' ', '\t', '\r', '\b', '\f'};
+    private static final char[] ESCAPED_CHAR = new char[]{'t', 'r', 'n', 'b', 'f'};
+    private static final char[] DECIMAL_RANGE = new char[]{'0', '9'};
+    private static final char[] HEXADECIMAL_RANGE = new char[]{'0', '9', 'a', 'f', 'A', 'F'};
+    private static final char[] ALPHA_RANGE = new char[]{'a', 'z', 'A', 'Z', '_', '_'};
+    private static final char[] ALPHANUMERIC_RANGE = new char[]{'a', 'z', 'A', 'Z', '0', '9', '_', '_'};
+    private static final char[] DELIMITER = new char[]{',', ':', '[', ']', '{', '}', '(', ')', '.', ';', '@'};
+    private static final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>', '^'};
 
     private final List<Token> tokens = new LinkedList<>();
     private final List<String> errors = new ArrayList<>();
@@ -45,6 +45,7 @@ public class Lexer {
     private Location location;
     private Token.Type tokenType;
     private int scopeLevel = 0;
+    private boolean writtenToken = false;
 
     /**
      * WIP params will change.
@@ -139,9 +140,12 @@ public class Lexer {
      */
     private State handleNewLine() throws CompilerException {
         if (accept(NEW_LINE)) {
-            if (column > 2) {
+            if (writtenToken) {
                 newToken(Token.Type.END_OF_STATEMENT);
+            } else {
+                ignore();
             }
+            writtenToken = false;
             ++line;
             column = 1;
             scopeLevel = 0;
@@ -270,7 +274,12 @@ public class Lexer {
      */
     private State lexIdentifier() {
         while (acceptRange(ALPHANUMERIC_RANGE)) ;
-        newToken(Token.Type.IDENTIFIER);
+        Symbols.Keyword keyword = Symbols.match(source.substring(start, pos));
+        if (keyword == null) {
+            newToken(Token.Type.IDENTIFIER);
+        } else {
+            newToken(Token.Type.KEYWORD, keyword);
+        }
         return this::lexStart;
     }
 
@@ -341,7 +350,7 @@ public class Lexer {
                     acceptRange(DECIMAL_RANGE);
                     ++size;
                 } else {
-                   error("illegal escape code");
+                    error("illegal escape code");
                 }
             }
             if (accept(EOF, NEW_LINE)) {
@@ -375,14 +384,23 @@ public class Lexer {
         throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
     }
 
+    private void addToken(Token token) {
+        tokens.add(token);
+        ignore();
+        writtenToken = true;
+    }
+
     /**
      * Creates a new token with the current start to pos position data from the source file.
      *
      * @param type The type of token to be created.
      */
     private void newToken(Token.Type type) {
-        tokens.add(new Token(type, source.substring(start, pos), scopeLevel, location));
-        ignore();
+        addToken(new Token(type, source.substring(start, pos), scopeLevel, location));
+    }
+
+    private void newToken(Token.Type type, Symbols.Keyword keyword) {
+        addToken(new Token(type, keyword, source.substring(start, pos), scopeLevel, location));
     }
 
     private String save() {

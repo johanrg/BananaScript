@@ -5,7 +5,8 @@ package com.github.johanrg.compiler;
  * @since 2016-06-29.
  */
 public class Token {
-    public enum Type {
+    enum Type {
+        KEYWORD,
         LITERAL,
         OPERATOR,
         DELIMITER,
@@ -17,47 +18,63 @@ public class Token {
     private final Type type;
     private final String data;
     private final Location location;
+    private final Symbols.Keyword keyword;
     private final DataType dataType;
     private final int scopeLevel;
 
-    public Token(Type type, String data, int scopeLevel, Location location) {
+    Token(Type type, String data, int scopeLevel, Location location) {
         this.type = type;
+        this.keyword = null;
         this.data = data;
         this.location = location;
         this.scopeLevel = scopeLevel;
         this.dataType = null;
     }
 
-    public Token(Type type, DataType dataType, String data, int scopeLevel, Location location) {
+    Token(Type type, DataType dataType, String data, int scopeLevel, Location location) {
         this.type = type;
+        this.keyword = null;
         this.dataType = dataType;
         this.data = data;
         this.scopeLevel = scopeLevel;
         this.location = location;
     }
 
-    public Type getType() {
+    Token(Type type, Symbols.Keyword keyword, String data, int scopeLevel, Location location) {
+        this.type = type;
+        this.keyword = keyword;
+        this.dataType = null;
+        this.data = data;
+        this.scopeLevel = scopeLevel;
+        this.location = location;
+    }
+
+    Type getType() {
         return type;
     }
 
-    public String getData() {
+    String getData() {
         return data;
     }
 
-    public DataType getDataType() {
+    public Symbols.Keyword getKeyword() {
+        return keyword;
+    }
+
+    DataType getDataType() {
         return dataType;
     }
 
-    public int getScopeLevel() {
+    int getScopeLevel() {
         return scopeLevel;
     }
 
-    public Location getLocation() {
+    Location getLocation() {
         return location;
     }
 
     @Override
     public String toString() {
-        return String.format("(%d:%d) [%d] %s '%s'", location.getLine(), location.getColumn(), scopeLevel, type.toString(), data) ;
+        return String.format("(%d:%d) [%d] %s '%s'", location.getLine(), location.getColumn(), scopeLevel, type.toString(), data);
     }
 }

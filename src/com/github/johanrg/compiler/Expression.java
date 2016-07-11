@@ -19,12 +19,16 @@ class Expression {
         } else if (node instanceof ASTBinaryOperator) {
             DataType left = typeCheck(((ASTBinaryOperator) node).getLeft());
             DataType right = typeCheck(((ASTBinaryOperator) node).getRight());
-            if (left != null && left.equals(right)) {
-                return left;
-            } else {
+            if (left != null && !left.equals(right)) {
                 error("type mismatch", node.getLocation());
             }
+            if (((ASTBinaryOperator) node).getType().getGroup() == ASTOperator.Group.RELATIONAL) {
+                return DataType.BOOLEAN;
+            } else {
+                return left;
+            }
         }
+
         assert false : "Node not supported";
         return null;
     }
@@ -75,7 +79,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solveAdd(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solveAdd(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary addition not allowed with boolean type", left.getLocation());
@@ -97,7 +101,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solveSub(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solveSub(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary subtraction not allowed with boolean type", left.getLocation());
@@ -120,7 +124,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solveMul(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solveMul(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary multiplication not allowed with boolean type", left.getLocation());
@@ -143,7 +147,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solveDiv(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solveDiv(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary division not allowed with boolean type", left.getLocation());
@@ -166,7 +170,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solveMod(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solveMod(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary modulus not allowed with boolean type", left.getLocation());
@@ -189,7 +193,7 @@ class Expression {
         return null;
     }
 
-    static ASTLiteral solvePow(ASTLiteral left, ASTLiteral right) throws CompilerException {
+    private static ASTLiteral solvePow(ASTLiteral left, ASTLiteral right) throws CompilerException {
         switch (left.getDataType()) {
             case BOOLEAN:
                 error("binary exponent not allowed with boolean type", left.getLocation());
