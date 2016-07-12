@@ -4,14 +4,14 @@ import com.github.johanrg.compiler.DataType;
 import com.github.johanrg.compiler.Location;
 
 /**
- * @author johan
- * @since 2016-06-30.
+ * @author Johan Gustafsson
+ * @since 7/12/2016.
  */
-public class ASTVariable extends ASTNode implements Identifier, Type {
+public class ASTConstant extends ASTNode implements Identifier, Type {
     private final String identifier;
     private final DataType dataType;
 
-    public ASTVariable(String identifier, DataType dataType, Location location) {
+    public ASTConstant(String identifier, DataType dataType, Location location) {
         super(location);
         this.identifier = identifier;
         this.dataType = dataType;
@@ -31,4 +31,5 @@ public class ASTVariable extends ASTNode implements Identifier, Type {
     public String toString() {
         return String.format("%s: %s : %s", this.getClass().getName(), identifier, getDataType().toString());
     }
+
 }

@@ -6,14 +6,10 @@ import com.github.johanrg.ast.*;
  * @author johan
  * @since 2016-07-08.
  */
-class Expression {
+class Expression extends CompilerErrorHandler {
     static DataType typeCheck(ASTNode node) throws CompilerException {
-        if (node instanceof ASTVariable) {
-            return ((ASTVariable) node).getDataType();
-        } else if (node instanceof ASTLiteral) {
-            return ((ASTLiteral) node).getDataType();
-        } else if (node instanceof ASTFunction) {
-            return ((ASTFunction) node).getReturnDataType();
+        if (node instanceof Type) {
+            return ((Type) node).getDataType();
         } else if (node instanceof ASTUnaryOperator) {
             return typeCheck(((ASTUnaryOperator) node).getSingleNode());
         } else if (node instanceof ASTBinaryOperator) {
@@ -47,7 +43,18 @@ class Expression {
         return dataType;
     }
 
-    static ASTLiteral simplifyExpressionIfPossible(ASTNode node) throws CompilerException {
+    static ASTNode simplifyExpression(ASTNode node) throws CompilerException {
+        if (node == null) return null;
+
+        ASTNode result = simplifyExpressionIfPossible(node);
+        if (result != null) {
+            return result;
+        } else {
+            return node;
+        }
+    }
+
+    private static ASTLiteral simplifyExpressionIfPossible(ASTNode node) throws CompilerException {
         if (node instanceof ASTFunction) {
             return null;
         } else if (node instanceof ASTVariable) {
@@ -217,10 +224,4 @@ class Expression {
         }
         return null;
     }
-
-    private static void error(String error, Location location) throws CompilerException {
-        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(),
-                error, location.getFileName()));
-    }
-
 }

@@ -10,7 +10,7 @@ import java.util.List;
  * @author johan
  * @since 2016-06-29.
  */
-public class Lexer {
+public class Lexer extends CompilerErrorHandler {
     /**
      * Used for the functional state machine
      */
@@ -31,8 +31,8 @@ public class Lexer {
     private static final char[] HEXADECIMAL_RANGE = new char[]{'0', '9', 'a', 'f', 'A', 'F'};
     private static final char[] ALPHA_RANGE = new char[]{'a', 'z', 'A', 'Z', '_', '_'};
     private static final char[] ALPHANUMERIC_RANGE = new char[]{'a', 'z', 'A', 'Z', '0', '9', '_', '_'};
-    private static final char[] DELIMITER = new char[]{',', ':', '[', ']', '{', '}', '(', ')', '.', ';', '@'};
-    private static final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>', '^'};
+    private static final char[] DELIMITER = new char[]{',', ':', '[', ']', '{', '}', '(', ')', ';', '@'};
+    private static final char[] OPERATOR = new char[]{'+', '-', '*', '/', '!', '%', '&', '|', '=', '<', '>', '^', '.'};
 
     private final List<Token> tokens = new LinkedList<>();
     private final List<String> errors = new ArrayList<>();
@@ -381,7 +381,7 @@ public class Lexer {
      * @param error The error message
      */
     private void error(String error) throws CompilerException {
-        throw new CompilerException(String.format("Error:(%d,%d) %s (%s)", location.getLine(), location.getColumn(), error, location.getFileName()));
+        error(error, location);
     }
 
     private void addToken(Token token) {

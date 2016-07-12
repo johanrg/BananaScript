@@ -54,6 +54,8 @@ public class ASTOperator extends ASTNode {
         UNARY_POST_INCREMENT("++", Group.UNARY, 14, Associativity.RIGHT_TO_LEFT),
         UNARY_POST_DECREMENT("--", Group.UNARY, 14, Associativity.RIGHT_TO_LEFT),
 
+        BINARY_RANGE("..", Group.BINARY, 15, Associativity.LEFT_TO_RIGHT),
+
         OPEN_PARENTHESES("(", Group.DELIMITER, 0, Associativity.LEFT_TO_RIGHT),
         CLOSE_PARENTHESES(")", Group.DELIMITER, 0, Associativity.LEFT_TO_RIGHT);
 

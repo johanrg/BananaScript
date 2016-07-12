@@ -9,6 +9,7 @@ class Symbols {
         IF("if"),
         ELSE("else"),
         WHILE("while"),
+        FOR("for"),
         ;
 
         private final String identifier;

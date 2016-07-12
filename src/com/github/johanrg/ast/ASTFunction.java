@@ -9,7 +9,7 @@ import java.util.List;
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTFunction extends ASTNode implements Identifier {
+public class ASTFunction extends ASTNode implements Identifier, Type {
     private final String identifier;
     private final List<ASTNode> parameters;
     private final ASTScope functionStatement;
@@ -35,7 +35,8 @@ public class ASTFunction extends ASTNode implements Identifier {
         return functionStatement;
     }
 
-    public DataType getReturnDataType() {
+    @Override
+    public DataType getDataType() {
         return returnDataType;
     }
 }

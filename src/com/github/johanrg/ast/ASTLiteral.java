@@ -7,7 +7,7 @@ import com.github.johanrg.compiler.Location;
  * @author johan
  * @since 2016-06-30.
  */
-public class ASTLiteral extends ASTNode {
+public class ASTLiteral extends ASTNode implements Type {
 
 
     private final Object value;
@@ -23,6 +23,7 @@ public class ASTLiteral extends ASTNode {
         return value;
     }
 
+    @Override
     public DataType getDataType() {
         return dataType;
     }
