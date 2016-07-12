@@ -206,18 +206,18 @@ public class Lexer extends CompilerErrorHandler {
             return this::lexStart;
         } else {
             lexUnsignedDigitSequence(false);
-            if (accept('.')) {
+            if (!match("..") && accept('.')) {
                 lexUnsignedDigitSequence(true);
             } else {
                 addLiteral(DataType.INT);
                 return this::lexStart;
             }
-        }
-        lexScaleFactor();
-        if (accept('f', 'F')) {
-            addLiteral(DataType.FLOAT);
-        } else {
-            addLiteral(DataType.DOUBLE);
+            lexScaleFactor();
+            if (accept('f', 'F')) {
+                addLiteral(DataType.FLOAT);
+            } else {
+                addLiteral(DataType.DOUBLE);
+            }
         }
         return this::lexStart;
     }
@@ -557,7 +557,7 @@ public class Lexer extends CompilerErrorHandler {
      * @return boolean true if there is a match.
      */
     private boolean match(String valid) {
-        return (source.length() - start - 1 >= valid.length() && source.substring(start, start + valid.length()).equals(valid));
+        return (source.length() - pos - 1 >= valid.length() && source.substring(pos, pos + valid.length()).equals(valid));
     }
 
     public List<String> getErrors() {

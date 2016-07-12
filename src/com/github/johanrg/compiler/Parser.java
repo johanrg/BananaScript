@@ -27,8 +27,8 @@ public class Parser extends CompilerErrorHandler {
 
     private ASTNode parseStatement() throws CompilerException {
         ASTNode node;
-        if (checkIfDefinition()) {
-            node = parseIdentifierDefinitionStatement();
+        if (checkIfDeclaration()) {
+            node = parseIdentifierDeclarationStatement();
         } else if (check(Symbols.Keyword.IF)) {
             node = parseIfStatement();
         } else if (check(Symbols.Keyword.WHILE)) {
@@ -37,7 +37,7 @@ public class Parser extends CompilerErrorHandler {
             if (checkIfStandardForStatement()) {
                 node = parseForStatement();
             } else {
-                node = parseRangeForStatement();
+                node = parseForRangeStatement();
             }
         } else {
             node = parseExpression();
@@ -60,7 +60,7 @@ public class Parser extends CompilerErrorHandler {
         return new ASTScope(statements, identifiers.popScope());
     }
 
-    private ASTNode parseIdentifierDefinitionStatement() throws CompilerException {
+    private ASTNode parseIdentifierDeclarationStatement() throws CompilerException {
         DataType identifierDataType;
         expect(Token.Type.IDENTIFIER);
         Token identifierToken = save();
@@ -83,9 +83,9 @@ public class Parser extends CompilerErrorHandler {
                 expect("(");
                 List<ASTNode> parameters = new ArrayList<>();
                 while (!check(")") & !check(Token.Type.END_OF_STATEMENT, Token.Type.EOF)) {
-                    parameters.add(parseIdentifierDefinitionStatement());
+                    parameters.add(parseIdentifierDeclarationStatement());
                     while (accept(",")) {
-                        parameters.add(parseIdentifierDefinitionStatement());
+                        parameters.add(parseIdentifierDeclarationStatement());
                     }
                 }
                 expect(")");
@@ -107,7 +107,7 @@ public class Parser extends CompilerErrorHandler {
                     ASTFunction function = new ASTFunction(identifierToken.getData(), parameters, compoundStatement,
                             returnType, identifierToken.getLocation());
                     if (!identifiers.addIdentifier(function)) {
-                        error(String.format("'%s' is already defined in this scope.", identifierToken.getData()),
+                        error(String.format("'%s' is already declared in this scope.", identifierToken.getData()),
                                 identifierToken.getLocation());
                     }
                     return function;
@@ -118,7 +118,7 @@ public class Parser extends CompilerErrorHandler {
                 // NOTE(Johan): Constant identifier
                 ASTNode node = parseExpression();
                 expect(Token.Type.END_OF_STATEMENT);
-                return assignExpressionToIdentifierDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+                return assignExpressionToIdentifierDeclaration(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
                         identifierDataType, node, true);
             }
             // NOTE(Johan): variable
@@ -127,7 +127,7 @@ public class Parser extends CompilerErrorHandler {
             if (!check(",")) {
                 expect(Token.Type.END_OF_STATEMENT);
             }
-            return assignExpressionToIdentifierDefinition(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
+            return assignExpressionToIdentifierDeclaration(ASTOperator.Type.ASSIGNMENT, identifierToken, dataTypeToken,
                     identifierDataType, node, false);
         } else {
             error("data type auto with no expression");
@@ -311,10 +311,10 @@ public class Parser extends CompilerErrorHandler {
         expect(Symbols.Keyword.FOR);
         Token ifToken = save();
         identifiers.newScope();
-        if (checkIfDefinition()) {
-            init = parseIdentifierDefinitionStatement();
+        if (checkIfDeclaration()) {
+            init = parseIdentifierDeclarationStatement();
             if (!(init instanceof ASTBinaryOperator) || !(((ASTBinaryOperator) init).getLeft() instanceof ASTVariable)) {
-                error("expected variable definition");
+                error("expected variable declaration");
             }
         }
         expect(",");
@@ -333,22 +333,32 @@ public class Parser extends CompilerErrorHandler {
         return new ASTForStatement(init, condition, increment, forScope, ifToken.getLocation());
     }
 
-    private ASTRangeForStatement parseRangeForStatement() throws CompilerException {
+    private ASTForRangeStatement parseForRangeStatement() throws CompilerException {
         expect(Symbols.Keyword.FOR);
         Token forToken = save();
-        ASTNode fromRange = parseIdentifierDefinitionStatement();
-        ASTNode toRange = null;
-        if (accept("..")) {
-            toRange = parseExpression();
+        Token identifierToken = null;
+        if (accept(Token.Type.IDENTIFIER)) {
+            identifierToken = save();
+            expect(":");
         }
-        expect(Token.Type.END_OF_STATEMENT);
+        ASTNode range = parseExpression();
+        DataType rangeType = Expression.typeCheck(range);
+        ASTVariable identifier;
+        if (identifierToken == null) {
+            identifier = new ASTVariable("it", rangeType, forToken.getLocation());
+        } else {
+            identifier = new ASTVariable(identifierToken.getData(), rangeType, identifierToken.getLocation());
+        }
+        identifiers.newScope();
+        identifiers.addIdentifier(identifier);
+        ASTNode result = new ASTBinaryOperator(ASTOperator.Type.ASSIGNMENT, identifier, range, identifier.getLocation());
         ASTScope forScope = parseScope();
-        return new ASTRangeForStatement(fromRange, toRange, forScope, forToken.getLocation());
+        return new ASTForRangeStatement(result, forScope, forToken.getLocation());
     }
 
-    private ASTNode assignExpressionToIdentifierDefinition(ASTOperator.Type assignmentType, Token identifierToken,
-                                                           Token dataTypeToken, DataType identifierDataType,
-                                                           ASTNode expression, boolean constant) throws CompilerException {
+    private ASTNode assignExpressionToIdentifierDeclaration(ASTOperator.Type assignmentType, Token identifierToken,
+                                                            Token dataTypeToken, DataType identifierDataType,
+                                                            ASTNode expression, boolean constant) throws CompilerException {
         ASTNode result = null;
         identifierDataType = Expression.typeCheckVsDataType(expression, dataTypeToken, identifierDataType);
 
@@ -365,7 +375,7 @@ public class Parser extends CompilerErrorHandler {
                     (ASTNode) identifier,
                     expression, identifierToken.getLocation());
         } else {
-            error(String.format("'%s' is already defined in this scope.", identifierToken.getData()),
+            error(String.format("'%s' is already declared in this scope.", identifierToken.getData()),
                     identifierToken.getLocation());
         }
         return result;
@@ -414,11 +424,11 @@ public class Parser extends CompilerErrorHandler {
         return null;
     }
 
-    private boolean checkIfDefinition() throws CompilerException {
+    private boolean checkIfDeclaration() throws CompilerException {
         bookmark();
-        boolean isDefinition = accept(Token.Type.IDENTIFIER) && accept(":");
+        boolean isDeclaration = accept(Token.Type.IDENTIFIER) && accept(":");
         returnToBookmark();
-        return isDefinition;
+        return isDeclaration;
     }
 
     private boolean checkIfAssignment() throws CompilerException {
