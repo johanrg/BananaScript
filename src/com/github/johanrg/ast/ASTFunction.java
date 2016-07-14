@@ -1,7 +1,7 @@
 package com.github.johanrg.ast;
 
-import com.github.johanrg.compiler.DataType;
-import com.github.johanrg.compiler.Location;
+import com.github.johanrg.frontend.DataType;
+import com.github.johanrg.frontend.Location;
 
 import java.util.List;
 

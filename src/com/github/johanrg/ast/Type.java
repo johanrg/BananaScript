@@ -1,6 +1,6 @@
 package com.github.johanrg.ast;
 
-import com.github.johanrg.compiler.DataType;
+import com.github.johanrg.frontend.DataType;
 
 /**
  * @author Johan Gustafsson

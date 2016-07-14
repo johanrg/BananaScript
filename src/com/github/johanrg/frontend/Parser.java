@@ -1,4 +1,4 @@
-package com.github.johanrg.compiler;
+package com.github.johanrg.frontend;
 
 import com.github.johanrg.ast.*;
 
@@ -11,6 +11,7 @@ import java.util.Stack;
  * @since 2016-07-02.
  */
 public class Parser extends CompilerErrorHandler {
+    private ASTNode root;
     private final List<Token> tokens;
     private final Identifiers identifiers = new Identifiers();
     private final Stack<ASTOperator> operatorStack = new Stack<>();
@@ -613,5 +614,9 @@ public class Parser extends CompilerErrorHandler {
         backup();
         error(String.format("expected '%s'", valid));
         return false;
+    }
+
+    public ASTNode getRoot() {
+        return root;
     }
 }

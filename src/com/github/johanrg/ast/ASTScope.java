@@ -1,7 +1,5 @@
 package com.github.johanrg.ast;
 
-import com.github.johanrg.compiler.Location;
-
 import java.util.List;
 import java.util.Map;
 

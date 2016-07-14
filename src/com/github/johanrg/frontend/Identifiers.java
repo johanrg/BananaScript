@@ -1,4 +1,4 @@
-package com.github.johanrg.compiler;
+package com.github.johanrg.frontend;
 
 import com.github.johanrg.ast.Identifier;
 

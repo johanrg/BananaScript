@@ -1,4 +1,4 @@
-package com.github.johanrg.compiler;
+package com.github.johanrg.frontend;
 
 /**
  * @author Johan Gustafsson

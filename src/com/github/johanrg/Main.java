@@ -1,8 +1,9 @@
 package com.github.johanrg;
 
-import com.github.johanrg.compiler.CompilerException;
-import com.github.johanrg.compiler.Lexer;
-import com.github.johanrg.compiler.Parser;
+import com.github.johanrg.backend.Diagram;
+import com.github.johanrg.frontend.CompilerException;
+import com.github.johanrg.frontend.Lexer;
+import com.github.johanrg.frontend.Parser;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -33,7 +34,7 @@ public class Main {
                 lexer.getErrors().forEach(System.out::println);
             } else {
                 Parser parser = new Parser(lexer.getTokens());
-
+                new Diagram(parser.getRoot());
             }
         } catch (CompilerException | IOException e) {
             System.err.println(e.getMessage());
