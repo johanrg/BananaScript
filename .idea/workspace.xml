@@ -2,34 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="f34b1fe0-5e12-470a-970b-6752db2de6f3" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scriptfile" afterPath="$PROJECT_DIR$/scriptfile" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/Main.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/Main.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTBinaryOperator.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTBinaryOperator.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTConstant.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTConstant.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTForRangeStatement.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTForRangeStatement.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTForStatement.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTForStatement.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTFunction.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTFunction.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTIfStatement.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTIfStatement.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTLiteral.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTLiteral.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTNode.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTNode.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTOperator.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTOperator.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTScope.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTScope.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTUnaryOperator.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTUnaryOperator.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTVariable.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTVariable.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTWhileStatement.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/ASTWhileStatement.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/Identifier.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/Identifier.java" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/ast/Type.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/ast/Type.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/CompilerErrorHandler.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/CompilerErrorHandler.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/CompilerException.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/CompilerException.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/DataType.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/DataType.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Expression.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Expression.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Identifiers.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Identifiers.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Lexer.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Lexer.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Location.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Location.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Parser.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Parser.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Symbols.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Symbols.java" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/com/github/johanrg/compiler/Token.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/frontend/Token.java" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/com/github/johanrg/backend/Diagram.java" afterPath="$PROJECT_DIR$/src/com/github/johanrg/backend/Diagram.java" />
     </list>
     <ignored path="BananaScript.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -91,8 +64,8 @@
           <file leaf-file-name="Diagram.java" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/src/com/github/johanrg/backend/Diagram.java">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="623">
-                  <caret line="60" column="46" selection-start-line="60" selection-start-column="46" selection-end-line="60" selection-end-column="46" />
+                <state relative-caret-position="391">
+                  <caret line="43" column="32" selection-start-line="43" selection-start-column="32" selection-end-line="43" selection-end-column="32" />
                   <folding />
                 </state>
               </provider>
@@ -104,7 +77,16 @@
                 <state relative-caret-position="3604">
                   <caret line="214" column="0" selection-start-line="214" selection-start-column="0" selection-end-line="214" selection-end-column="0" />
                   <folding>
-                    <element signature="imports" expanded="true" />
+                    <element signature="e#11018#11019#0" expanded="false" />
+                    <element signature="e#11081#11082#0" expanded="false" />
+                    <element signature="e#12128#12129#0" expanded="false" />
+                    <element signature="e#12155#12156#0" expanded="false" />
+                    <element signature="e#12669#12670#0" expanded="false" />
+                    <element signature="e#12710#12711#0" expanded="false" />
+                    <element signature="e#16371#16372#0" expanded="false" />
+                    <element signature="e#16400#16401#0" expanded="false" />
+                    <element signature="e#16438#16439#0" expanded="false" />
+                    <element signature="e#16467#16468#0" expanded="false" />
                   </folding>
                 </state>
               </provider>
@@ -950,12 +932,12 @@
       <workItem from="1468339685419" duration="888000" />
       <workItem from="1468341625948" duration="2000" />
       <workItem from="1468341842438" duration="14000" />
-      <workItem from="1468498590996" duration="5114000" />
+      <workItem from="1468498590996" duration="10289000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="241507000" />
+    <option name="totallyTimeSpent" value="246682000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -968,7 +950,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="false" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32936078" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -988,7 +970,7 @@
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="UI Designer" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="true" content_ui="tabs" />
-      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.20476706" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.36511377" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -1037,7 +1019,7 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="174" />
+      <option name="time" value="175" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="Application">
@@ -1328,7 +1310,16 @@
         <state relative-caret-position="3604">
           <caret line="214" column="0" selection-start-line="214" selection-start-column="0" selection-end-line="214" selection-end-column="0" />
           <folding>
-            <element signature="imports" expanded="true" />
+            <element signature="e#11018#11019#0" expanded="false" />
+            <element signature="e#11081#11082#0" expanded="false" />
+            <element signature="e#12128#12129#0" expanded="false" />
+            <element signature="e#12155#12156#0" expanded="false" />
+            <element signature="e#12669#12670#0" expanded="false" />
+            <element signature="e#12710#12711#0" expanded="false" />
+            <element signature="e#16371#16372#0" expanded="false" />
+            <element signature="e#16400#16401#0" expanded="false" />
+            <element signature="e#16438#16439#0" expanded="false" />
+            <element signature="e#16467#16468#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -1393,18 +1384,18 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/github/johanrg/backend/Diagram.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="623">
-          <caret line="60" column="46" selection-start-line="60" selection-start-column="46" selection-end-line="60" selection-end-column="46" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/scriptfile">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="136">
           <caret line="8" column="0" selection-start-line="8" selection-start-column="0" selection-end-line="8" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/github/johanrg/backend/Diagram.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="391">
+          <caret line="43" column="32" selection-start-line="43" selection-start-column="32" selection-end-line="43" selection-end-column="32" />
           <folding />
         </state>
       </provider>
